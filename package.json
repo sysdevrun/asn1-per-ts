@@ -1,0 +1,22 @@
+{
+  "name": "per-unaligned-ts",
+  "version": "1.0.0",
+  "description": "PER (Packed Encoding Rules) unaligned encoder/decoder for ASN.1 types in TypeScript",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["asn1", "per", "unaligned", "encoder", "decoder", "packed-encoding-rules"],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
+  }
+}
