@@ -1,0 +1,35 @@
+-- UIC barcode header ASN.1 schema (v1.0.0)
+-- Source: https://github.com/UnionInternationalCheminsdeFer/UIC-barcode/blob/master/misc/uicBarcodeHeader_v1.0.0.asn
+
+ASN-Module-UicBarcodeHeader DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+UicBarcodeHeader ::= SEQUENCE {
+    format IA5String,
+    level2SignedData Level2DataType,
+    level2Signature OCTET STRING OPTIONAL
+}
+
+Level2DataType ::= SEQUENCE {
+    level1Data Level1DataType,
+    level1Signature OCTET STRING OPTIONAL,
+    level2Data DataType OPTIONAL
+}
+
+Level1DataType ::= SEQUENCE {
+    securityProviderNum INTEGER (1..32000) OPTIONAL,
+    securityProviderIA5 IA5String OPTIONAL,
+    keyId INTEGER (0..99999) OPTIONAL,
+    dataSequence SEQUENCE OF DataType,
+    level1KeyAlg OBJECT IDENTIFIER OPTIONAL,
+    level2KeyAlg OBJECT IDENTIFIER OPTIONAL,
+    level1SigningAlg OBJECT IDENTIFIER OPTIONAL,
+    level2SigningAlg OBJECT IDENTIFIER OPTIONAL,
+    level2PublicKey OCTET STRING OPTIONAL
+}
+
+DataType ::= SEQUENCE {
+    dataFormat IA5String,
+    data OCTET STRING
+}
+
+END
