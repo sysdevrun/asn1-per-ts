@@ -113,3 +113,7 @@ In tests fixtures, add uicbarcodeheader example of hex data. In e2e test directo
 ## Regenerate UIC schemas with CLI tool
 
 Refetch the UIC ASN.1 schemas from GitHub and regenerate the SchemaNode JSON files. Create a reusable CLI tool in `cli/generate-schema.ts` that reads a local `.asn` file and outputs the corresponding `.schema.json`.
+
+## Decode UIC barcode with Intercode 6 extensions
+
+Download uicRailTicketData_v2.0.3.asn from https://github.com/UnionInternationalCheminsdeFer/UIC-barcode/blob/master/misc/uicRailTicketData_v2.0.3.asn and encode it to JSON schema with the CLI tool. Add it to the schemas directory and update the README. In cli directory, add a TypeScript program that decodes the UIC barcode header fixture (v1) and outputs the details of the ticket. Dispatch on dataFormat to decode FCB2 data as UicRailTicketData using the v2 schema. Dispatch on extensionId pattern "_<RICS>II1" to decode extensionData as IntercodeIssuingData. Dispatch on dataFormat pattern "_<RICS>.ID1" to decode level2Data as IntercodeDynamicData.
