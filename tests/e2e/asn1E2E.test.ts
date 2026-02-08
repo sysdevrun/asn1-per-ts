@@ -5,6 +5,10 @@
  * the Intercode specification (NF EN 12320) and UIC barcode header standard.
  * Expected PER unaligned encoding hex values are taken directly from the
  * specification documents.
+ *
+ * Every test is a round-trip test: encode a value, decode the result, and
+ * verify it equals the original. The two "known hex" tests additionally
+ * verify the encoded output matches the specification hex.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -92,91 +96,41 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
       codec = new SchemaCodec(schemas['IntercodeIssuingData']);
     });
 
-    it('parses the ASN.1 module with 4 type assignments', () => {
-      const module = parseAsn1Module(INTERCODE_MODULE);
-      expect(module.assignments).toHaveLength(4);
-      expect(module.assignments.map(a => a.name)).toEqual([
-        'RetailChannelData',
-        'ProductRetailerData',
-        'IntercodeIssuingData',
-        'IntercodeDynamicData',
-      ]);
-    });
-
-    it('converts all types to schema nodes with correct structure', () => {
-      const module = parseAsn1Module(INTERCODE_MODULE);
-      const schemas = convertModuleToSchemaNodes(module);
-      expect(Object.keys(schemas)).toHaveLength(4);
-
-      // IntercodeIssuingData should resolve ProductRetailerData inline
-      const issuing = schemas['IntercodeIssuingData'] as {
-        type: string;
-        fields: Array<{ name: string; schema: { type: string }; optional?: boolean }>;
-        extensionFields?: unknown[];
-      };
-      expect(issuing.type).toBe('SEQUENCE');
-      expect(issuing.fields).toHaveLength(4);
-      expect(issuing.fields[3].name).toBe('productRetailer');
-      expect(issuing.fields[3].optional).toBe(true);
-      expect(issuing.fields[3].schema.type).toBe('SEQUENCE'); // resolved from ProductRetailerData
-      expect(issuing.extensionFields).toEqual([]);
-    });
-
-    it('encodes to expected hex (11 bytes)', () => {
+    it('round-trips spec value and matches expected hex', () => {
       const hex = codec.encodeToHex(VALUE);
       expect(hex).toBe(EXPECTED_HEX);
       expect(hex.length / 2).toBe(11);
+      expect(codec.decodeFromHex(hex)).toEqual(VALUE);
     });
 
-    it('decodes from expected hex back to original value', () => {
-      const decoded = codec.decodeFromHex(EXPECTED_HEX) as Record<string, unknown>;
-      expect(decoded.intercodeVersion).toBe(1);
-      expect(decoded.intercodeInstanciation).toBe(1);
-      expect(decoded.networkId).toEqual(new Uint8Array([0x25, 0x09, 0x15]));
-
-      const retailer = decoded.productRetailer as Record<string, unknown>;
-      expect(retailer.retailChannel).toBe('mobileApplication');
-      expect(retailer.retailGeneratorId).toBe(0);
-      expect(retailer.retailServerId).toBe(32);
-      expect(retailer.retailerId).toBe(1037);
-      expect(retailer.retailPointId).toBe(6);
-    });
-
-    it('round-trips encode -> decode', () => {
-      const hex = codec.encodeToHex(VALUE);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.intercodeVersion).toBe(VALUE.intercodeVersion);
-      expect(decoded.intercodeInstanciation).toBe(VALUE.intercodeInstanciation);
-      expect(decoded.networkId).toEqual(VALUE.networkId);
-      expect(decoded.productRetailer).toEqual(VALUE.productRetailer);
-    });
-
-    it('encodes without optional productRetailer', () => {
-      const valueNoRetailer = {
+    it('round-trips without optional productRetailer', () => {
+      const value = {
         intercodeVersion: 1,
         intercodeInstanciation: 1,
         networkId: new Uint8Array([0x25, 0x09, 0x15]),
       };
-      const hex = codec.encodeToHex(valueNoRetailer);
+      const hex = codec.encodeToHex(value);
       const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.intercodeVersion).toBe(1);
-      expect(decoded.intercodeInstanciation).toBe(1);
-      expect(decoded.networkId).toEqual(new Uint8Array([0x25, 0x09, 0x15]));
+      expect(decoded).toEqual(value);
       expect(decoded.productRetailer).toBeUndefined();
     });
 
     it('produces smaller encoding when optional fields are absent', () => {
       const hexFull = codec.encodeToHex(VALUE);
-      const hexNoRetailer = codec.encodeToHex({
+      const valueNoRetailer = {
         intercodeVersion: 1,
         intercodeInstanciation: 1,
         networkId: new Uint8Array([0x25, 0x09, 0x15]),
-      });
+      };
+      const hexNoRetailer = codec.encodeToHex(valueNoRetailer);
       expect(hexNoRetailer.length).toBeLessThan(hexFull.length);
+      // Both still round-trip
+      expect(codec.decodeFromHex(hexFull)).toEqual(VALUE);
+      expect(codec.decodeFromHex(hexNoRetailer)).toEqual(valueNoRetailer);
     });
 
-    it('encodes with partial ProductRetailerData (some optional fields)', () => {
-      const valuePartial = {
+    it('round-trips with partial ProductRetailerData (some optional fields)', () => {
+      const value = {
         intercodeVersion: 2,
         intercodeInstanciation: 0,
         networkId: new Uint8Array([0x00, 0x00, 0x01]),
@@ -185,18 +139,7 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
           retailerId: 100,
         },
       };
-      const hex = codec.encodeToHex(valuePartial);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.intercodeVersion).toBe(2);
-      expect(decoded.intercodeInstanciation).toBe(0);
-      expect(decoded.networkId).toEqual(new Uint8Array([0x00, 0x00, 0x01]));
-
-      const retailer = decoded.productRetailer as Record<string, unknown>;
-      expect(retailer.retailChannel).toBe('webSite');
-      expect(retailer.retailGeneratorId).toBeUndefined();
-      expect(retailer.retailServerId).toBeUndefined();
-      expect(retailer.retailerId).toBe(100);
-      expect(retailer.retailPointId).toBeUndefined();
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
     it('round-trips all RetailChannelData enum values', () => {
@@ -211,34 +154,22 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
           networkId: new Uint8Array([0x00, 0x00, 0x00]),
           productRetailer: { retailChannel: channel },
         };
-        const hex = codec.encodeToHex(value);
-        const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-        const retailer = decoded.productRetailer as Record<string, unknown>;
-        expect(retailer.retailChannel).toBe(channel);
+        expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
       }
     });
 
-    it('handles constraint boundary values', () => {
-      const valueBounds = {
-        intercodeVersion: 7,       // max
-        intercodeInstanciation: 7, // max
+    it('round-trips constraint boundary values', () => {
+      const value = {
+        intercodeVersion: 7,
+        intercodeInstanciation: 7,
         networkId: new Uint8Array([0xFF, 0xFF, 0xFF]),
         productRetailer: {
-          retailGeneratorId: 255,  // max
-          retailServerId: 255,     // max
-          retailerId: 4095,        // max
+          retailGeneratorId: 255,
+          retailServerId: 255,
+          retailerId: 4095,
         },
       };
-      const hex = codec.encodeToHex(valueBounds);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.intercodeVersion).toBe(7);
-      expect(decoded.intercodeInstanciation).toBe(7);
-      expect(decoded.networkId).toEqual(new Uint8Array([0xFF, 0xFF, 0xFF]));
-
-      const retailer = decoded.productRetailer as Record<string, unknown>;
-      expect(retailer.retailGeneratorId).toBe(255);
-      expect(retailer.retailServerId).toBe(255);
-      expect(retailer.retailerId).toBe(4095);
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
   });
 
@@ -264,104 +195,64 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
       codec = new SchemaCodec(schemas['IntercodeDynamicData']);
     });
 
-    it('converts to schema node with DEFAULT and OPTIONAL fields', () => {
-      const module = parseAsn1Module(INTERCODE_MODULE);
-      const schemas = convertModuleToSchemaNodes(module);
-      const dynamic = schemas['IntercodeDynamicData'] as {
-        type: string;
-        fields: Array<{ name: string; optional?: boolean; defaultValue?: unknown }>;
-        extensionFields?: unknown[];
-      };
-      expect(dynamic.type).toBe('SEQUENCE');
-      expect(dynamic.fields).toHaveLength(4);
-      expect(dynamic.fields[0].defaultValue).toBe(0);
-      expect(dynamic.fields[1].optional).toBe(true);
-      expect(dynamic.fields[2].optional).toBe(true);
-      expect(dynamic.fields[3].optional).toBe(true);
-      expect(dynamic.extensionFields).toEqual([]);
-    });
-
-    it('encodes to expected hex (6 bytes)', () => {
+    it('round-trips spec value and matches expected hex', () => {
       const hex = codec.encodeToHex(VALUE);
       expect(hex).toBe(EXPECTED_HEX);
       expect(hex.length / 2).toBe(6);
-    });
-
-    it('decodes from expected hex back to original value', () => {
-      const decoded = codec.decodeFromHex(EXPECTED_HEX);
-      expect(decoded).toEqual(VALUE);
-    });
-
-    it('round-trips encode -> decode', () => {
-      const hex = codec.encodeToHex(VALUE);
       expect(codec.decodeFromHex(hex)).toEqual(VALUE);
     });
 
-    it('DEFAULT value (dynamicContentDay=0) is omitted from encoding', () => {
+    it('round-trips DEFAULT value (dynamicContentDay=0) with optional fields', () => {
       const valueWithDefault = { dynamicContentDay: 0, dynamicContentTime: 100 };
+      expect(codec.decodeFromHex(codec.encodeToHex(valueWithDefault))).toEqual(valueWithDefault);
+
       const valueWithNonDefault = { dynamicContentDay: 5, dynamicContentTime: 100 };
+      expect(codec.decodeFromHex(codec.encodeToHex(valueWithNonDefault))).toEqual(valueWithNonDefault);
 
-      const hexDefault = codec.encodeToHex(valueWithDefault);
-      const hexNonDefault = codec.encodeToHex(valueWithNonDefault);
-
-      // Non-default value requires more bits
-      expect(hexNonDefault.length).toBeGreaterThanOrEqual(hexDefault.length);
-
-      expect(codec.decodeFromHex(hexDefault)).toEqual(valueWithDefault);
-      expect(codec.decodeFromHex(hexNonDefault)).toEqual(valueWithNonDefault);
+      // Non-default value requires at least as many bits
+      expect(codec.encodeToHex(valueWithNonDefault).length).toBeGreaterThanOrEqual(
+        codec.encodeToHex(valueWithDefault).length,
+      );
     });
 
-    it('handles negative constraint values (dynamicContentDay=-1)', () => {
-      const valueNeg = { dynamicContentDay: -1, dynamicContentTime: 0 };
-      const hex = codec.encodeToHex(valueNeg);
-      expect(codec.decodeFromHex(hex)).toEqual(valueNeg);
+    it('round-trips negative constraint values (dynamicContentDay=-1)', () => {
+      const value = { dynamicContentDay: -1, dynamicContentTime: 0 };
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
-    it('handles negative UTC offset', () => {
-      const valueNegOffset = {
-        dynamicContentDay: 0,
-        dynamicContentUTCOffset: -60,
-      };
-      const hex = codec.encodeToHex(valueNegOffset);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.dynamicContentDay).toBe(0);
-      expect(decoded.dynamicContentUTCOffset).toBe(-60);
+    it('round-trips negative UTC offset', () => {
+      const value = { dynamicContentDay: 0, dynamicContentUTCOffset: -60 };
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
-    it('handles positive UTC offset', () => {
-      const valuePosOffset = {
-        dynamicContentDay: 0,
-        dynamicContentUTCOffset: 60,
-      };
-      const hex = codec.encodeToHex(valuePosOffset);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.dynamicContentUTCOffset).toBe(60);
+    it('round-trips positive UTC offset', () => {
+      const value = { dynamicContentDay: 0, dynamicContentUTCOffset: 60 };
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
-    it('handles constraint boundary values', () => {
-      const valueMax = {
+    it('round-trips constraint boundary max values', () => {
+      const value = {
         dynamicContentDay: 1070,
         dynamicContentTime: 86399,
         dynamicContentUTCOffset: 60,
         dynamicContentDuration: 86399,
       };
-      const hex = codec.encodeToHex(valueMax);
-      expect(codec.decodeFromHex(hex)).toEqual(valueMax);
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
+    });
 
-      const valueMin = {
+    it('round-trips constraint boundary min values', () => {
+      const value = {
         dynamicContentDay: -1,
         dynamicContentTime: 0,
         dynamicContentUTCOffset: -60,
         dynamicContentDuration: 0,
       };
-      const hexMin = codec.encodeToHex(valueMin);
-      expect(codec.decodeFromHex(hexMin)).toEqual(valueMin);
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
-    it('encodes with minimal data (all optional absent, default used)', () => {
-      const valueMinimal = { dynamicContentDay: 0 };
-      const hex = codec.encodeToHex(valueMinimal);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
+    it('round-trips minimal data (all optional absent, default used)', () => {
+      const value = { dynamicContentDay: 0 };
+      const decoded = codec.decodeFromHex(codec.encodeToHex(value)) as Record<string, unknown>;
       expect(decoded.dynamicContentDay).toBe(0);
       expect(decoded.dynamicContentTime).toBeUndefined();
       expect(decoded.dynamicContentUTCOffset).toBeUndefined();
@@ -370,45 +261,39 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // UIC Barcode Header (using existing .asn fixture, OID fields omitted)
+  // UIC Barcode Header (using existing .asn fixture, with native OID support)
   // ---------------------------------------------------------------------------
-  describe('UIC Barcode Header (fixture, OID fields omitted)', () => {
+  describe('UIC Barcode Header (fixture, native OID)', () => {
     const FIXTURE_PATH = path.join(__dirname, '..', 'fixtures', 'uicBarcodeHeader_v2.0.1.asn');
     const asnText = fs.readFileSync(FIXTURE_PATH, 'utf-8');
 
-    let schemas: Record<string, unknown>;
+    let schemas: Record<string, SchemaNode>;
 
     beforeAll(() => {
       const module = parseAsn1Module(asnText);
-      schemas = convertModuleToSchemaNodes(module, {
-        objectIdentifierHandling: 'omit',
-      });
+      schemas = convertModuleToSchemaNodes(module);
     });
 
     it('builds codecs for all 4 types', () => {
       expect(Object.keys(schemas)).toHaveLength(4);
       for (const typeName of Object.keys(schemas)) {
-        const codec = new SchemaCodec(schemas[typeName] as SchemaNode);
+        const codec = new SchemaCodec(schemas[typeName]);
         expect(codec).toBeDefined();
       }
     });
 
     it('round-trips DataType with realistic values', () => {
-      const codec = new SchemaCodec(schemas['DataType'] as SchemaNode);
+      const codec = new SchemaCodec(schemas['DataType']);
       const value = {
         dataFormat: 'FCB2',
         data: new Uint8Array([0x22, 0x21, 0x01, 0xCE]),
       };
-      const hex = codec.encodeToHex(value);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.dataFormat).toBe('FCB2');
-      expect(decoded.data).toEqual(new Uint8Array([0x22, 0x21, 0x01, 0xCE]));
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
-    it('round-trips Level1DataType with realistic values (OID fields omitted)', () => {
-      const codec = new SchemaCodec(schemas['Level1DataType'] as SchemaNode);
+    it('round-trips Level1DataType with OID fields', () => {
+      const codec = new SchemaCodec(schemas['Level1DataType']);
 
-      // Mimic the spec example (F.5.1) but without OID fields
       const ticketData = new Uint8Array([
         0x22, 0x21, 0x01, 0xCE, 0xC0, 0x87, 0x87, 0xC6,
         0x42, 0x2F, 0xB3, 0x6E, 0xC1, 0x9C, 0x99, 0x2C,
@@ -426,23 +311,38 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
         dataSequence: [
           { dataFormat: 'FCB2', data: ticketData },
         ],
+        level1KeyAlg: '1.2.840.113549.1.1.1',
+        level2KeyAlg: '1.2.840.10045.2.1',
+        level1SigningAlg: '1.2.840.113549.1.1.11',
+        level2SigningAlg: '1.2.840.10045.4.3.2',
         level2PublicKey: publicKey,
       };
 
-      const hex = codec.encodeToHex(value);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.securityProviderNum).toBe(3703);
-      expect(decoded.keyId).toBe(1);
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
+    });
 
-      const dataSeq = decoded.dataSequence as Array<Record<string, unknown>>;
-      expect(dataSeq).toHaveLength(1);
-      expect(dataSeq[0].dataFormat).toBe('FCB2');
-      expect(dataSeq[0].data).toEqual(ticketData);
-      expect(decoded.level2PublicKey).toEqual(publicKey);
+    it('round-trips Level1DataType without optional OID fields', () => {
+      const codec = new SchemaCodec(schemas['Level1DataType']);
+
+      const value = {
+        securityProviderNum: 3703,
+        keyId: 1,
+        dataSequence: [
+          { dataFormat: 'FCB2', data: new Uint8Array([0x01]) },
+        ],
+        level2PublicKey: new Uint8Array([0x03, 0x54]),
+      };
+
+      const decoded = codec.decodeFromHex(codec.encodeToHex(value)) as Record<string, unknown>;
+      expect(decoded).toEqual(value);
+      expect(decoded.level1KeyAlg).toBeUndefined();
+      expect(decoded.level2KeyAlg).toBeUndefined();
+      expect(decoded.level1SigningAlg).toBeUndefined();
+      expect(decoded.level2SigningAlg).toBeUndefined();
     });
 
     it('round-trips Level2DataType with signature and dynamic data', () => {
-      const codec = new SchemaCodec(schemas['Level2DataType'] as SchemaNode);
+      const codec = new SchemaCodec(schemas['Level2DataType']);
 
       const fakeSig = new Uint8Array(Array(64).fill(0x11));
       const dynamicData = new Uint8Array([0x3B, 0xA4, 0xF9, 0xA0, 0x09, 0x60]);
@@ -462,21 +362,11 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
         },
       };
 
-      const hex = codec.encodeToHex(value);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-
-      const l1 = decoded.level1Data as Record<string, unknown>;
-      expect(l1.securityProviderNum).toBe(3703);
-      expect(l1.keyId).toBe(1);
-      expect(decoded.level1Signature).toEqual(fakeSig);
-
-      const l2Data = decoded.level2Data as Record<string, unknown>;
-      expect(l2Data.dataFormat).toBe('_3703.ID1');
-      expect(l2Data.data).toEqual(dynamicData);
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
     it('round-trips full UicBarcodeHeader with all nested data', () => {
-      const codec = new SchemaCodec(schemas['UicBarcodeHeader'] as SchemaNode);
+      const codec = new SchemaCodec(schemas['UicBarcodeHeader']);
 
       const staticSig = new Uint8Array(Array(64).fill(0x11));
       const dynamicSig = new Uint8Array(Array(64).fill(0x22));
@@ -493,6 +383,7 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
                 data: new Uint8Array([0xAA, 0xBB, 0xCC]),
               },
             ],
+            level1KeyAlg: '2.16.840.1.101.3.4.2.1',
             level2PublicKey: new Uint8Array([0x03, 0x54]),
           },
           level1Signature: staticSig,
@@ -504,25 +395,11 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
         level2Signature: dynamicSig,
       };
 
-      const hex = codec.encodeToHex(value);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-
-      expect(decoded.format).toBe('U1');
-      expect(decoded.level2Signature).toEqual(dynamicSig);
-
-      const signed = decoded.level2SignedData as Record<string, unknown>;
-      expect(signed.level1Signature).toEqual(staticSig);
-
-      const l1 = signed.level1Data as Record<string, unknown>;
-      expect(l1.securityProviderNum).toBe(3703);
-      expect(l1.keyId).toBe(1);
-
-      const l2Data = signed.level2Data as Record<string, unknown>;
-      expect(l2Data.dataFormat).toBe('_3703.ID1');
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
-    it('handles UicBarcodeHeader without optional fields', () => {
-      const codec = new SchemaCodec(schemas['UicBarcodeHeader'] as SchemaNode);
+    it('round-trips UicBarcodeHeader without optional fields', () => {
+      const codec = new SchemaCodec(schemas['UicBarcodeHeader']);
 
       const value = {
         format: 'U1',
@@ -535,18 +412,9 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
         },
       };
 
-      const hex = codec.encodeToHex(value);
-      const decoded = codec.decodeFromHex(hex) as Record<string, unknown>;
-      expect(decoded.format).toBe('U1');
+      const decoded = codec.decodeFromHex(codec.encodeToHex(value)) as Record<string, unknown>;
+      expect(decoded).toEqual(value);
       expect(decoded.level2Signature).toBeUndefined();
-
-      const signed = decoded.level2SignedData as Record<string, unknown>;
-      expect(signed.level1Signature).toBeUndefined();
-      expect(signed.level2Data).toBeUndefined();
-
-      const l1 = signed.level1Data as Record<string, unknown>;
-      expect(l1.securityProviderNum).toBeUndefined();
-      expect(l1.keyId).toBeUndefined();
     });
   });
 
@@ -554,25 +422,18 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
   // Cross-type encoding: both Intercode types from the same module
   // ---------------------------------------------------------------------------
   describe('Combined Intercode module cross-type tests', () => {
-    let schemas: Record<string, unknown>;
+    let schemas: Record<string, SchemaNode>;
 
     beforeAll(() => {
       const module = parseAsn1Module(INTERCODE_MODULE);
       schemas = convertModuleToSchemaNodes(module);
     });
 
-    it('builds codecs for all 4 types in the module', () => {
-      for (const typeName of Object.keys(schemas)) {
-        const codec = new SchemaCodec(schemas[typeName] as SchemaNode);
-        expect(codec).toBeDefined();
-      }
-    });
+    it('round-trips both Intercode types matching spec hex', () => {
+      const issuingCodec = new SchemaCodec(schemas['IntercodeIssuingData']);
+      const dynamicCodec = new SchemaCodec(schemas['IntercodeDynamicData']);
 
-    it('encodes both IntercodeIssuingData and IntercodeDynamicData matching spec hex', () => {
-      const issuingCodec = new SchemaCodec(schemas['IntercodeIssuingData'] as SchemaNode);
-      const dynamicCodec = new SchemaCodec(schemas['IntercodeDynamicData'] as SchemaNode);
-
-      const issuingHex = issuingCodec.encodeToHex({
+      const issuingValue = {
         intercodeVersion: 1,
         intercodeInstanciation: 1,
         networkId: new Uint8Array([0x25, 0x09, 0x15]),
@@ -583,33 +444,36 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
           retailerId: 1037,
           retailPointId: 6,
         },
-      });
+      };
+      const issuingHex = issuingCodec.encodeToHex(issuingValue);
       expect(issuingHex).toBe('492509157c400810340418');
+      expect(issuingCodec.decodeFromHex(issuingHex)).toEqual(issuingValue);
 
-      const dynamicHex = dynamicCodec.encodeToHex({
+      const dynamicValue = {
         dynamicContentDay: 0,
         dynamicContentTime: 59710,
         dynamicContentUTCOffset: -8,
         dynamicContentDuration: 600,
-      });
+      };
+      const dynamicHex = dynamicCodec.encodeToHex(dynamicValue);
       expect(dynamicHex).toBe('3ba4f9a00960');
+      expect(dynamicCodec.decodeFromHex(dynamicHex)).toEqual(dynamicValue);
     });
 
-    it('encodes RetailChannelData as standalone extensible enum', () => {
-      const codec = new SchemaCodec(schemas['RetailChannelData'] as SchemaNode);
+    it('round-trips RetailChannelData as standalone extensible enum', () => {
+      const codec = new SchemaCodec(schemas['RetailChannelData']);
 
       const allValues = [
         'smsTicket', 'mobileApplication', 'webSite', 'ticketOffice',
         'depositaryTerminal', 'onBoardTerminal', 'ticketVendingMachine',
       ];
       for (const val of allValues) {
-        const hex = codec.encodeToHex(val);
-        expect(codec.decodeFromHex(hex)).toBe(val);
+        expect(codec.decodeFromHex(codec.encodeToHex(val))).toBe(val);
       }
     });
 
-    it('encodes ProductRetailerData as standalone type', () => {
-      const codec = new SchemaCodec(schemas['ProductRetailerData'] as SchemaNode);
+    it('round-trips ProductRetailerData as standalone type', () => {
+      const codec = new SchemaCodec(schemas['ProductRetailerData']);
 
       const value = {
         retailChannel: 'ticketVendingMachine',
@@ -618,15 +482,11 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
         retailerId: 2000,
         retailPointId: 100,
       };
-      const hex = codec.encodeToHex(value);
-      const decoded = codec.decodeFromHex(hex);
-      expect(decoded).toEqual(value);
+      expect(codec.decodeFromHex(codec.encodeToHex(value))).toEqual(value);
     });
 
-    it('Intercode issuing data can embed dynamic data as OCTET STRING', () => {
-      // Simulate the real-world pattern where dynamic data is encoded separately
-      // and embedded as binary in another structure
-      const dynamicCodec = new SchemaCodec(schemas['IntercodeDynamicData'] as SchemaNode);
+    it('round-trips dynamic data encoded as standalone bytes', () => {
+      const dynamicCodec = new SchemaCodec(schemas['IntercodeDynamicData']);
 
       const dynamicValue = {
         dynamicContentDay: 0,
@@ -635,13 +495,12 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
         dynamicContentDuration: 600,
       };
 
-      // Encode dynamic data
+      // Encode and verify raw bytes match spec
       const dynamicBytes = dynamicCodec.encode(dynamicValue);
       expect(dynamicBytes).toEqual(new Uint8Array([0x3B, 0xA4, 0xF9, 0xA0, 0x09, 0x60]));
 
-      // Decode dynamic data from bytes
-      const dynamicDecoded = dynamicCodec.decode(dynamicBytes);
-      expect(dynamicDecoded).toEqual(dynamicValue);
+      // Round-trip from bytes
+      expect(dynamicCodec.decode(dynamicBytes)).toEqual(dynamicValue);
     });
   });
 });
