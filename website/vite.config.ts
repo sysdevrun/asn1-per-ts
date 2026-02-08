@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       'per-unaligned-ts': path.resolve(__dirname, '../src'),
+      'intercode6-ts': path.resolve(__dirname, '../intercode6-ts/src'),
     },
   },
 });

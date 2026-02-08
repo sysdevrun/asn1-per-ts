@@ -18,8 +18,9 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "per-unaligned-ts": ["../src/index.ts"]
+      "per-unaligned-ts": ["../src/index.ts"],
+      "intercode6-ts": ["../intercode6-ts/src/index.ts"]
     }
   },
-  "include": ["src", "../src"]
+  "include": ["src", "../src", "../intercode6-ts/src"]
 }

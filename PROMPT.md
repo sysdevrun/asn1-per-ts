@@ -125,3 +125,7 @@ For each schema file already present in the schemas directory, fetch the latest 
 ## Add examples documentation
 
 Create a new examples/ directory with a schema parser markdown file with examples of usage and explanation of options. Do the same thing for decoding binary data encoded with PER unaligned. Do the same thing for encoding object to binary. Use files in CLI and the classes referenced to find usage. Reference every file in the README and CLAUDE files.
+
+## Intercode 6 decoder/generator module
+
+Read the CLI for decoding intercode6 tickets. Create in an intercode6-ts directory a npm module (for both web and node) that decodes binary encoded data. When the module is compiled, the JSON schemas must be embedded in the module. Create TypeScript types for the result. Also create an encoding method. In the website, add a new tab that allows to decode a ticket from hex encoded data showing every detail. Add as example the current fixture. Add a new tab that generates a ticket to hex encoded plus Aztec code. The intercode6-ts module must be added to the website.
