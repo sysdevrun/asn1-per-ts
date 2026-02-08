@@ -44,3 +44,13 @@ also add the two prompts of this conversation
 
 deploy to GitHub pages fail with
 Cannot find module 'peggy' or its corresponding type declarations.
+
+## Encode schema documents
+
+use the library to encode the following schema:
+id : integer with default value 5
+name: ia5string default value hello
+
+then encode the two documents
+id: 5, name: hello
+id: 42, name world
