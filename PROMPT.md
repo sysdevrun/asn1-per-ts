@@ -39,3 +39,8 @@ When editing this project, always read `PROMPT.md` first to understand the histo
 
 the goal is to append on every prompt the file so it's possible to get all the prompts used to generate the project.
 also add the two prompts of this conversation
+
+## Fix GitHub Pages deploy: missing peggy dependency
+
+deploy to GitHub pages fail with
+Cannot find module 'peggy' or its corresponding type declarations.
