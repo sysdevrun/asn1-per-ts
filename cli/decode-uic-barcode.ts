@@ -18,7 +18,7 @@ import { BitBuffer } from '../src/BitBuffer';
 // Load pre-compiled schemas
 import headerSchemas from '../schemas/uic-barcode/uicBarcodeHeader_v1.schema.json';
 import railTicketV2Schemas from '../schemas/uic-barcode/uicRailTicketData_v2.schema.json';
-import railTicketV3Schemas from '../schemas/uic-barcode/uicRailTicketData.schema.json';
+import railTicketV3Schemas from '../schemas/uic-barcode/uicRailTicketData_v3.schema.json';
 import intercodeSchemas from '../schemas/uic-barcode/intercode6.schema.json';
 
 // ---------------------------------------------------------------------------
