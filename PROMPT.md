@@ -85,3 +85,8 @@ add clearly in the documentation how to indicate the marker extension is present
 
 in the asn schema parser, ensure this is correctly added in the schema.
 add specific unit tests for that
+
+## End-to-end ASN.1 tests
+
+add a test section dedicated to full end to end tests.
+add the conversions with ASN parser and encoding and decoding for real-world ASN.1 types from the Intercode specification (IntercodeIssuingData, ProductRetailerData, RetailChannelData, IntercodeDynamicData) and the UIC Barcode Header standard. Expected PER unaligned encoding hex values are verified against the specification documents.
