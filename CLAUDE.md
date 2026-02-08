@@ -15,6 +15,9 @@ The `examples/` directory contains guides that should be sufficient for most usa
 - `tests/` - Jest unit tests mirroring the src structure
 - `schemas/` - Pre-generated SchemaNode JSON files from real-world ASN.1 specifications
 - `examples/` - Usage guides (encoding, decoding, schema parsing)
+  - `examples/schema-parser.md` - Parsing ASN.1 text to SchemaNode, constraint options, CLI usage
+  - `examples/encoding.md` - Encoding objects to PER unaligned binary (high-level and low-level APIs)
+  - `examples/decoding.md` - Decoding PER unaligned binary back to objects (high-level and low-level APIs)
 - `cli/` - CLI scripts (schema generation, UIC barcode decoding)
 - `website/` - React + TypeScript + TailwindCSS demo app (Vite, deployed to GitHub Pages)
 
