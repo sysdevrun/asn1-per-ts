@@ -117,3 +117,7 @@ Refetch the UIC ASN.1 schemas from GitHub and regenerate the SchemaNode JSON fil
 ## Decode UIC barcode with Intercode 6 extensions
 
 Download uicRailTicketData_v2.0.3.asn from https://github.com/UnionInternationalCheminsdeFer/UIC-barcode/blob/master/misc/uicRailTicketData_v2.0.3.asn and encode it to JSON schema with the CLI tool. Add it to the schemas directory and update the README. In cli directory, add a TypeScript program that decodes the UIC barcode header fixture (v1) and outputs the details of the ticket. Dispatch on dataFormat to decode FCB2 data as UicRailTicketData using the v2 schema. Dispatch on extensionId pattern "_<RICS>II1" to decode extensionData as IntercodeIssuingData. Dispatch on dataFormat pattern "_<RICS>.ID1" to decode level2Data as IntercodeDynamicData.
+
+## Update schema versions
+
+For each schema file already present in the schemas directory, fetch the latest minor version of every major version of that schema type from https://github.com/UnionInternationalCheminsdeFer/UIC-barcode/tree/master/misc. Convert the ASN.1 source using the CLI tool and save the resulting schema JSON. Update the schemas README to reference the new files and add a Version column with the full version number.
