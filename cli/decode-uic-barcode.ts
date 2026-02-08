@@ -175,11 +175,16 @@ function main(): void {
   console.log(`File: ${fixturePath}\n`);
 
   const hex = loadHexFixture(fixturePath);
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map(b => parseInt(b, 16)));
 
-  // Step 1: Peek the format field using v1 header (format is at the same
-  // position in all versions), then re-decode with the matching version.
-  const peek = getHeaderCodec(1).decodeFromHex(hex) as any;
-  const format: string = peek.format;
+  // Step 1: Peek the format field with a minimal decode.
+  // UicBarcodeHeader is a non-extensible SEQUENCE with one optional field
+  // (level2Signature), producing a 1-bit bitmap before format (IA5String).
+  // We read past the bitmap, then decode just the IA5String.
+  const peekBuf = BitBuffer.from(bytes);
+  peekBuf.readBit(); // skip optional bitmap (level2Signature present/absent)
+  const format = SchemaBuilder.build({ type: 'IA5String' } as SchemaNode)
+    .decode(peekBuf) as string;
 
   const headerVersionMatch = format.match(/^U(\d+)$/);
   if (!headerVersionMatch) {
