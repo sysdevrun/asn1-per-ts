@@ -281,6 +281,106 @@ describe('convertModuleToSchemaNodes', () => {
     });
   });
 
+  describe('recursive type references', () => {
+    it('emits $ref for direct self-referencing SEQUENCE field', () => {
+      const mod = parseAsn1Module(`
+        Test DEFINITIONS ::= BEGIN
+          TreeNode ::= SEQUENCE {
+            value INTEGER (0..255),
+            children SEQUENCE OF TreeNode OPTIONAL
+          }
+        END
+      `);
+      const schemas = convertModuleToSchemaNodes(mod);
+      const node = schemas['TreeNode'] as any;
+      expect(node.type).toBe('SEQUENCE');
+      expect(node.fields[0]).toEqual({
+        name: 'value',
+        schema: { type: 'INTEGER', min: 0, max: 255 },
+      });
+      // The recursive reference should be a $ref, not inlined
+      const childrenField = node.fields[1];
+      expect(childrenField.name).toBe('children');
+      expect(childrenField.optional).toBe(true);
+      expect(childrenField.schema.type).toBe('SEQUENCE OF');
+      expect(childrenField.schema.item).toEqual({ type: '$ref', ref: 'TreeNode' });
+    });
+
+    it('emits $ref for multiple self-referencing fields', () => {
+      const mod = parseAsn1Module(`
+        Test DEFINITIONS ::= BEGIN
+          ViaStation ::= SEQUENCE {
+            name IA5String,
+            alternativeRoutes SEQUENCE OF ViaStation OPTIONAL,
+            route SEQUENCE OF ViaStation OPTIONAL
+          }
+        END
+      `);
+      const schemas = convertModuleToSchemaNodes(mod);
+      const node = schemas['ViaStation'] as any;
+      expect(node.type).toBe('SEQUENCE');
+      expect(node.fields[0]).toEqual({ name: 'name', schema: { type: 'IA5String' } });
+      expect(node.fields[1].schema.item).toEqual({ type: '$ref', ref: 'ViaStation' });
+      expect(node.fields[2].schema.item).toEqual({ type: '$ref', ref: 'ViaStation' });
+    });
+
+    it('emits $ref for self-referencing CHOICE alternative', () => {
+      const mod = parseAsn1Module(`
+        Test DEFINITIONS ::= BEGIN
+          Expr ::= CHOICE {
+            literal INTEGER (0..999),
+            nested Expr
+          }
+        END
+      `);
+      const schemas = convertModuleToSchemaNodes(mod);
+      const node = schemas['Expr'] as any;
+      expect(node.type).toBe('CHOICE');
+      expect(node.alternatives[0]).toEqual({
+        name: 'literal',
+        schema: { type: 'INTEGER', min: 0, max: 999 },
+      });
+      expect(node.alternatives[1]).toEqual({
+        name: 'nested',
+        schema: { type: '$ref', ref: 'Expr' },
+      });
+    });
+
+    it('does not emit $ref for non-recursive type references', () => {
+      const mod = parseAsn1Module(`
+        Test DEFINITIONS ::= BEGIN
+          Inner ::= INTEGER (0..255)
+          Outer ::= SEQUENCE {
+            a Inner,
+            b Inner
+          }
+        END
+      `);
+      const schemas = convertModuleToSchemaNodes(mod);
+      const node = schemas['Outer'] as any;
+      // Inner should be inlined, not a $ref
+      expect(node.fields[0].schema).toEqual({ type: 'INTEGER', min: 0, max: 255 });
+      expect(node.fields[1].schema).toEqual({ type: 'INTEGER', min: 0, max: 255 });
+    });
+
+    it('handles recursive type with constraints on the SEQUENCE OF', () => {
+      const mod = parseAsn1Module(`
+        Test DEFINITIONS ::= BEGIN
+          Category ::= SEQUENCE {
+            name IA5String,
+            subCategories SEQUENCE (SIZE (0..10)) OF Category OPTIONAL
+          }
+        END
+      `);
+      const schemas = convertModuleToSchemaNodes(mod);
+      const node = schemas['Category'] as any;
+      expect(node.fields[1].schema.type).toBe('SEQUENCE OF');
+      expect(node.fields[1].schema.item).toEqual({ type: '$ref', ref: 'Category' });
+      expect(node.fields[1].schema.minSize).toBe(0);
+      expect(node.fields[1].schema.maxSize).toBe(10);
+    });
+  });
+
   describe('SchemaBuilder compatibility', () => {
     it('produces SchemaNode usable by SchemaBuilder', () => {
       const mod = parseAsn1Module(`
