@@ -54,3 +54,7 @@ name: ia5string default value hello
 then encode the two documents
 id: 5, name: hello
 id: 42, name world
+
+## Test for decoding
+
+test for decoding

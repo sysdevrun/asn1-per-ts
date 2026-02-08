@@ -51,4 +51,42 @@ describe('Schema document encoding', () => {
     // Default values should produce a smaller encoding since fields are omitted
     expect(hexDefaults.length).toBeLessThan(hexNonDefaults.length);
   });
+
+  describe('decoding', () => {
+    it('decodes hex "00" to default values (id=5, name="hello")', () => {
+      const decoded = codec.decodeFromHex('00');
+      expect(decoded).toEqual({ id: 5, name: 'hello' });
+    });
+
+    it('decodes hex "ca82f7dfcb6640" to (id=42, name="world")', () => {
+      const decoded = codec.decodeFromHex('ca82f7dfcb6640');
+      expect(decoded).toEqual({ id: 42, name: 'world' });
+    });
+
+    it('decodes from Uint8Array with default values', () => {
+      const data = new Uint8Array([0x00]);
+      const decoded = codec.decode(data);
+      expect(decoded).toEqual({ id: 5, name: 'hello' });
+    });
+
+    it('decodes from Uint8Array with non-default values', () => {
+      const data = new Uint8Array([0xca, 0x82, 0xf7, 0xdf, 0xcb, 0x66, 0x40]);
+      const decoded = codec.decode(data);
+      expect(decoded).toEqual({ id: 42, name: 'world' });
+    });
+
+    it('decodes when only id differs from default', () => {
+      const doc = { id: 100, name: 'hello' };
+      const hex = codec.encodeToHex(doc);
+      const decoded = codec.decodeFromHex(hex);
+      expect(decoded).toEqual(doc);
+    });
+
+    it('decodes when only name differs from default', () => {
+      const doc = { id: 5, name: 'test' };
+      const hex = codec.encodeToHex(doc);
+      const decoded = codec.decodeFromHex(hex);
+      expect(decoded).toEqual(doc);
+    });
+  });
 });
