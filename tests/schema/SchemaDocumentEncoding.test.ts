@@ -165,3 +165,57 @@ describe('Schema versioning with extension marker', () => {
     });
   });
 });
+
+describe('Extension marker position affects encoding', () => {
+  const doc = { id: 100, name: 'world' };
+
+  // name is a ROOT field (before the extension marker)
+  const schemaNameInRoot: SchemaNode = {
+    type: 'SEQUENCE',
+    fields: [
+      { name: 'id', schema: { type: 'INTEGER', min: 0, max: 255 } },
+      { name: 'name', schema: { type: 'IA5String', minSize: 0, maxSize: 64 } },
+    ],
+    extensionFields: [],
+  };
+
+  // name is an EXTENSION field (after the extension marker)
+  const schemaNameInExt: SchemaNode = {
+    type: 'SEQUENCE',
+    fields: [
+      { name: 'id', schema: { type: 'INTEGER', min: 0, max: 255 } },
+    ],
+    extensionFields: [
+      { name: 'name', schema: { type: 'IA5String', minSize: 0, maxSize: 64 } },
+    ],
+  };
+
+  const codecRoot = new SchemaCodec(schemaNameInRoot);
+  const codecExt = new SchemaCodec(schemaNameInExt);
+
+  it('root encoding is more compact than extension encoding', () => {
+    const hexRoot = codecRoot.encodeToHex(doc);
+    const hexExt = codecExt.encodeToHex(doc);
+    console.log('name as root field    hex:', hexRoot, `(${hexRoot.length / 2} bytes)`);
+    console.log('name as extension field hex:', hexExt, `(${hexExt.length / 2} bytes)`);
+
+    // Extension encoding is larger due to open type wrapper overhead
+    expect(hexRoot.length).toBeLessThan(hexExt.length);
+  });
+
+  it('both round-trip correctly despite different encodings', () => {
+    const hexRoot = codecRoot.encodeToHex(doc);
+    const hexExt = codecExt.encodeToHex(doc);
+
+    expect(codecRoot.decodeFromHex(hexRoot)).toEqual(doc);
+    expect(codecExt.decodeFromHex(hexExt)).toEqual(doc);
+  });
+
+  it('encodings are NOT interchangeable between schemas', () => {
+    const hexRoot = codecRoot.encodeToHex(doc);
+    const hexExt = codecExt.encodeToHex(doc);
+
+    // They produce different bit layouts, so cross-decoding gives wrong results
+    expect(hexRoot).not.toEqual(hexExt);
+  });
+});

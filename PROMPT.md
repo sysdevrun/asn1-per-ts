@@ -74,3 +74,7 @@ name: ia5string
 objects to encode in round trip:
 id :42 , With v1 and v2
 id: 100, name: world, with v2. decode with v1 the output got from encoding from v2 too
+
+## Extension marker position
+
+does the position of the extension marker matter
