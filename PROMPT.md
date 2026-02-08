@@ -140,3 +140,10 @@ Add a `decodeWithMetadata` method to every codec that returns a recursive tree o
 ## Simplify CLAUDE.md
 
 Simplify Claude file: list only directories, update list of directories. Emphasize that the intercode6-ts npm module is the main encoding/decoding library and usually doesn't require understanding low-level primitives in src directory. Examples in examples directory should be enough for most usage.
+
+## Implement decodeWithMetadata
+
+implement DECODE_WITH_METADATA_PLAN.md
+
+update Readme and examples to indicate how the new method works.
+add unit tests too

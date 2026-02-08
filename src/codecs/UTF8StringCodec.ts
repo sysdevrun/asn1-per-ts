@@ -1,5 +1,7 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from './Codec';
+import type { DecodedNode } from './DecodedNode';
+import { primitiveDecodeWithMetadata } from './DecodedNode';
 import {
   constrainedWholeNumberBitCount,
   encodeConstrainedLength,
@@ -279,5 +281,9 @@ export class UTF8StringCodec implements Codec<string> {
     const bytes = buffer.readOctets(len);
     const decoder = new TextDecoder();
     return decoder.decode(bytes);
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    return primitiveDecodeWithMetadata(this, buffer);
   }
 }

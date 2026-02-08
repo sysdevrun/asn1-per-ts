@@ -1,5 +1,6 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from '../codecs/Codec';
+import type { DecodedNode } from '../codecs/DecodedNode';
 import { SchemaBuilder, SchemaNode } from './SchemaBuilder';
 
 /**
@@ -39,6 +40,20 @@ export class SchemaCodec {
       hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
     );
     return this.decode(bytes);
+  }
+
+  /** Decode a Uint8Array with full metadata tree. */
+  decodeWithMetadata(data: Uint8Array): DecodedNode {
+    const buffer = BitBuffer.from(data);
+    return this._codec.decodeWithMetadata(buffer);
+  }
+
+  /** Decode a hex string with full metadata tree. */
+  decodeFromHexWithMetadata(hex: string): DecodedNode {
+    const bytes = new Uint8Array(
+      hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+    );
+    return this.decodeWithMetadata(bytes);
   }
 
   /** Access the underlying built codec. */

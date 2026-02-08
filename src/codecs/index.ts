@@ -1,4 +1,7 @@
 export type { Codec } from './Codec';
+export type { DecodedNode, FieldMeta } from './DecodedNode';
+export { primitiveDecodeWithMetadata } from './DecodedNode';
+export { stripMetadata } from './stripMetadata';
 export { BooleanCodec } from './BooleanCodec';
 export { IntegerCodec } from './IntegerCodec';
 export type { IntegerConstraints } from './IntegerCodec';

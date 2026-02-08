@@ -1,5 +1,7 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from './Codec';
+import type { DecodedNode } from './DecodedNode';
+import { primitiveDecodeWithMetadata } from './DecodedNode';
 import {
   constrainedWholeNumberBitCount,
   encodeConstrainedWholeNumber,
@@ -86,5 +88,9 @@ export class IntegerCodec implements Codec<number> {
     } else {
       return decodeUnconstrainedWholeNumber(buffer);
     }
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    return primitiveDecodeWithMetadata(this, buffer);
   }
 }

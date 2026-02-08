@@ -7,7 +7,8 @@ Decode PER unaligned binary data back into JavaScript/TypeScript objects.
 There are two levels of decoding API:
 
 1. **High-level**: `SchemaCodec` (`src/schema/SchemaCodec.ts`) - decode a `Uint8Array` or hex string into a plain object using a `SchemaNode` definition.
-2. **Low-level**: Individual codec classes (`src/codecs/`) + `BitBuffer` (`src/BitBuffer.ts`) - decode directly from a bit-level buffer.
+2. **Metadata decoding**: `decodeWithMetadata` returns a `DecodedNode` tree with bit positions, raw bytes, and codec references for every field. Use `stripMetadata` to convert back to a plain object.
+3. **Low-level**: Individual codec classes (`src/codecs/`) + `BitBuffer` (`src/BitBuffer.ts`) - decode directly from a bit-level buffer.
 
 ## High-Level Decoding with SchemaCodec
 
@@ -92,6 +93,143 @@ const decoded = codec.decodeFromHex('95');
 ```
 
 CHOICE values decode as an object with a single key matching the chosen alternative name.
+
+## Decoding with Metadata
+
+Every codec has a `decodeWithMetadata` method that returns a `DecodedNode` tree. Each node wraps the decoded value with metadata about its encoding: bit offset, bit length, raw bytes, the codec that decoded it, and schema flags (optional, present, default, extension).
+
+### High-level metadata decoding
+
+```typescript
+import { SchemaCodec, stripMetadata } from 'per-unaligned-ts';
+import type { DecodedNode } from 'per-unaligned-ts';
+
+const codec = new SchemaCodec({
+  type: 'SEQUENCE',
+  fields: [
+    { name: 'id', schema: { type: 'INTEGER', min: 0, max: 255 } },
+    { name: 'active', schema: { type: 'BOOLEAN' } },
+    { name: 'name', schema: { type: 'IA5String', minSize: 1, maxSize: 50 }, optional: true },
+  ],
+});
+
+const hex = codec.encodeToHex({ id: 42, active: true, name: 'hello' });
+const node = codec.decodeFromHexWithMetadata(hex);
+```
+
+`SchemaCodec.decodeFromHexWithMetadata()` and `SchemaCodec.decodeWithMetadata()` return a `DecodedNode` instead of a plain object.
+
+### Inspecting the DecodedNode tree
+
+```typescript
+// The root node wraps a SEQUENCE — value is Record<string, DecodedNode>
+const fields = node.value as Record<string, DecodedNode>;
+
+// Each field has a value and metadata
+console.log(fields.id.value);           // 42
+console.log(fields.id.meta.bitOffset);  // 0
+console.log(fields.id.meta.bitLength);  // 8
+console.log(fields.id.meta.rawBytes);   // Uint8Array — the raw PER encoding of this field
+
+console.log(fields.active.value);           // true
+console.log(fields.active.meta.bitOffset);  // 8 (starts right after id)
+console.log(fields.active.meta.bitLength);  // 1
+
+// Optional field metadata
+console.log(fields.name.meta.optional);  // true
+console.log(fields.name.meta.present);   // true (was encoded)
+```
+
+### FieldMeta properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `bitOffset` | `number` | Start bit position in the source buffer |
+| `bitLength` | `number` | Number of bits consumed |
+| `rawBytes` | `Uint8Array` | Raw PER encoding of this value, left-aligned |
+| `codec` | `Codec<unknown>` | The codec instance that decoded this node |
+| `optional` | `boolean?` | Whether the schema declared this field OPTIONAL |
+| `present` | `boolean?` | Whether this field was actually present in encoding |
+| `isDefault` | `boolean?` | Whether the DEFAULT value was used |
+| `isExtension` | `boolean?` | Whether this field is an extension addition |
+
+### Value shapes by codec type
+
+- **Primitive codecs** (Boolean, Integer, Enumerated, etc.): `value` is the raw JS value (`boolean`, `number`, `string`, etc.)
+- **SequenceCodec**: `value` is `Record<string, DecodedNode>` — each field is a wrapped node
+- **SequenceOfCodec**: `value` is `DecodedNode[]` — each array item is a wrapped node
+- **ChoiceCodec**: `value` is `{ key: string; value: DecodedNode }` — the selected alternative is a wrapped node
+
+### OPTIONAL / DEFAULT field handling
+
+For absent OPTIONAL fields (not present, no default), the tree includes a node with `value: undefined`, `present: false`, `bitLength: 0`. For DEFAULT fields using the default value, the node has `value: <defaultValue>`, `isDefault: true`, `present: false`.
+
+```typescript
+const codec = new SchemaCodec({
+  type: 'SEQUENCE',
+  fields: [
+    { name: 'id', schema: { type: 'INTEGER', min: 0, max: 255 } },
+    { name: 'name', schema: { type: 'IA5String', minSize: 1, maxSize: 50 }, optional: true },
+    { name: 'version', schema: { type: 'INTEGER', min: 0, max: 10 }, defaultValue: 1 },
+  ],
+});
+
+const hex = codec.encodeToHex({ id: 5 });
+const node = codec.decodeFromHexWithMetadata(hex);
+const fields = node.value as Record<string, DecodedNode>;
+
+// Absent optional field
+console.log(fields.name.meta.present);   // false
+console.log(fields.name.meta.optional);  // true
+console.log(fields.name.value);          // undefined
+
+// Default field (not explicitly encoded)
+console.log(fields.version.meta.present);   // false
+console.log(fields.version.meta.isDefault); // true
+console.log(fields.version.value);          // 1
+```
+
+### Converting back to a plain object with stripMetadata
+
+`stripMetadata` walks the `DecodedNode` tree and reconstructs a plain object identical to `decode()`:
+
+```typescript
+import { stripMetadata } from 'per-unaligned-ts';
+
+const node = codec.decodeFromHexWithMetadata(hex);
+const plain = stripMetadata(node);
+// plain is identical to codec.decodeFromHex(hex)
+```
+
+`stripMetadata` dispatches on the codec stored in each node's metadata using `instanceof` checks. It throws if it encounters an unhandled codec type.
+
+### Low-level metadata decoding
+
+Every codec class also supports `decodeWithMetadata`:
+
+```typescript
+import { BitBuffer, IntegerCodec } from 'per-unaligned-ts';
+
+const codec = new IntegerCodec({ min: 0, max: 255 });
+const buffer = BitBuffer.from(new Uint8Array([0x2a]));
+const node = codec.decodeWithMetadata(buffer);
+
+console.log(node.value);           // 42
+console.log(node.meta.bitOffset);  // 0
+console.log(node.meta.bitLength);  // 8
+console.log(node.meta.rawBytes);   // Uint8Array([0x2a])
+console.log(node.meta.codec);      // the IntegerCodec instance
+```
+
+### BitBuffer.extractBits
+
+The `extractBits` method extracts a range of bits into a new byte-aligned `Uint8Array`. This is used internally by `decodeWithMetadata` to populate `rawBytes`.
+
+```typescript
+const buffer = BitBuffer.from(new Uint8Array([0xab, 0xcd]));
+const raw = buffer.extractBits(4, 8);
+// raw === Uint8Array([0xbc]) — bits 4..11 extracted and left-aligned
+```
 
 ## Decoding with Pre-generated Schemas
 
@@ -424,7 +562,9 @@ See `cli/decode-uic-barcode.ts` for the full implementation.
 | `src/BitBuffer.ts` | `BitBuffer` - bit-level read/write buffer |
 | `src/schema/SchemaCodec.ts` | `SchemaCodec` - high-level decode from hex/bytes |
 | `src/schema/SchemaBuilder.ts` | `SchemaBuilder.build()` / `buildAll()` - builds codecs from SchemaNode |
-| `src/codecs/Codec.ts` | `Codec<T>` interface with `decode(buffer)` method |
+| `src/codecs/Codec.ts` | `Codec<T>` interface with `decode(buffer)` and `decodeWithMetadata(buffer)` methods |
+| `src/codecs/DecodedNode.ts` | `DecodedNode`, `FieldMeta` interfaces and `primitiveDecodeWithMetadata` helper |
+| `src/codecs/stripMetadata.ts` | `stripMetadata` function — converts `DecodedNode` tree back to plain object |
 | `src/codecs/BooleanCodec.ts` | `BooleanCodec` |
 | `src/codecs/IntegerCodec.ts` | `IntegerCodec` with constraint options |
 | `src/codecs/EnumeratedCodec.ts` | `EnumeratedCodec` with extension support |

@@ -1,5 +1,7 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from './Codec';
+import type { DecodedNode } from './DecodedNode';
+import { primitiveDecodeWithMetadata } from './DecodedNode';
 import {
   encodeConstrainedLength,
   decodeConstrainedLength,
@@ -103,5 +105,9 @@ export class OctetStringCodec implements Codec<Uint8Array> {
 
     const len = decodeUnconstrainedLength(buffer);
     return buffer.readOctets(len);
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    return primitiveDecodeWithMetadata(this, buffer);
   }
 }

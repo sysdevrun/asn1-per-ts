@@ -9,6 +9,7 @@ TypeScript library for encoding and decoding data using ASN.1 PER (Packed Encodi
 - **Composite codecs**: CHOICE, SEQUENCE, SEQUENCE OF
 - **Constraint support**: value ranges, size constraints, extensibility markers, default values
 - **Schema-driven encoding**: define types as JSON, encode/decode plain objects
+- **Metadata decoding**: `decodeWithMetadata` returns a tree of `DecodedNode` objects with bit positions, raw bytes, and codec references for every field
 
 ## Install
 
@@ -51,6 +52,37 @@ console.log(hex);
 
 const decoded = codec.decodeFromHex(hex);
 console.log(decoded);
+```
+
+### Decoding with Metadata
+
+`decodeWithMetadata` returns a `DecodedNode` tree with full encoding metadata (bit offsets, bit lengths, raw bytes, codec references) for every field. Use `stripMetadata` to convert back to a plain object identical to `decode()`.
+
+```typescript
+import { SchemaCodec, stripMetadata } from 'per-unaligned-ts';
+import type { DecodedNode } from 'per-unaligned-ts';
+
+const codec = new SchemaCodec({
+  type: 'SEQUENCE',
+  fields: [
+    { name: 'id', schema: { type: 'INTEGER', min: 0, max: 255 } },
+    { name: 'active', schema: { type: 'BOOLEAN' } },
+  ],
+});
+
+const hex = codec.encodeToHex({ id: 42, active: true });
+const node = codec.decodeFromHexWithMetadata(hex);
+
+// Access field metadata
+const fields = node.value as Record<string, DecodedNode>;
+console.log(fields.id.value);           // 42
+console.log(fields.id.meta.bitOffset);  // 0
+console.log(fields.id.meta.bitLength);  // 8
+console.log(fields.id.meta.rawBytes);   // Uint8Array([0x2a])
+
+// Strip metadata to get plain object
+const plain = stripMetadata(node);
+// plain === { id: 42, active: true }
 ```
 
 ### Extension Markers

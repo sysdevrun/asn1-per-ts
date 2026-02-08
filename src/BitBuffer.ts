@@ -170,6 +170,25 @@ export class BitBuffer {
     return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
+  /**
+   * Extract a range of bits into a new byte-aligned Uint8Array.
+   *
+   * The extracted bits are left-aligned in the output: bit 0 of the result
+   * corresponds to bit `startBit` of the source. Trailing bits in the last
+   * byte are zero-padded.
+   */
+  extractBits(startBit: number, bitCount: number): Uint8Array {
+    if (bitCount === 0) return new Uint8Array(0);
+    const out = BitBuffer.alloc(Math.ceil(bitCount / 8));
+    for (let i = 0; i < bitCount; i++) {
+      const srcByte = (startBit + i) >> 3;
+      const srcBitIdx = 7 - ((startBit + i) & 7);
+      const bit = ((this._data[srcByte] >> srcBitIdx) & 1) as 0 | 1;
+      out.writeBit(bit);
+    }
+    return out.toUint8Array();
+  }
+
   /** Reset cursor to 0. */
   reset(): void {
     this._offset = 0;

@@ -1,5 +1,7 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from './Codec';
+import type { DecodedNode } from './DecodedNode';
+import { primitiveDecodeWithMetadata } from './DecodedNode';
 import {
   encodeConstrainedWholeNumber,
   decodeConstrainedWholeNumber,
@@ -81,5 +83,9 @@ export class EnumeratedCodec implements Codec<string> {
 
     const idx = decodeConstrainedWholeNumber(buffer, 0, this.rootValues.length - 1);
     return this.rootValues[idx];
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    return primitiveDecodeWithMetadata(this, buffer);
   }
 }

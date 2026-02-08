@@ -1,5 +1,7 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from './Codec';
+import type { DecodedNode } from './DecodedNode';
+import { primitiveDecodeWithMetadata } from './DecodedNode';
 
 /**
  * PER unaligned Boolean codec (X.691 §11).
@@ -12,5 +14,9 @@ export class BooleanCodec implements Codec<boolean> {
 
   decode(buffer: BitBuffer): boolean {
     return buffer.readBit() === 1;
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    return primitiveDecodeWithMetadata(this, buffer);
   }
 }

@@ -1,5 +1,7 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from './Codec';
+import type { DecodedNode } from './DecodedNode';
+import { primitiveDecodeWithMetadata } from './DecodedNode';
 import {
   encodeConstrainedLength,
   decodeConstrainedLength,
@@ -129,5 +131,9 @@ export class BitStringCodec implements Codec<BitStringValue> {
     const arr = tmp.toUint8Array();
     data.set(arr);
     return { data, bitLength };
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    return primitiveDecodeWithMetadata(this, buffer);
   }
 }

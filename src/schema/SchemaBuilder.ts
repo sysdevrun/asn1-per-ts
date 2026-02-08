@@ -1,5 +1,6 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from '../codecs/Codec';
+import type { DecodedNode } from '../codecs/DecodedNode';
 import { BooleanCodec } from '../codecs/BooleanCodec';
 import { NullCodec } from '../codecs/NullCodec';
 import { IntegerCodec } from '../codecs/IntegerCodec';
@@ -36,6 +37,10 @@ class LazyCodec implements Codec<unknown> {
 
   decode(buffer: BitBuffer): unknown {
     return this.codec.decode(buffer);
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    return this.codec.decodeWithMetadata(buffer);
   }
 }
 

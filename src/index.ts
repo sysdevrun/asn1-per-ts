@@ -1,5 +1,7 @@
 export { BitBuffer } from './BitBuffer';
 export type { Codec } from './codecs/Codec';
+export type { DecodedNode, FieldMeta } from './codecs/DecodedNode';
+export { stripMetadata } from './codecs/stripMetadata';
 export { BooleanCodec } from './codecs/BooleanCodec';
 export { IntegerCodec } from './codecs/IntegerCodec';
 export type { IntegerConstraints } from './codecs/IntegerCodec';

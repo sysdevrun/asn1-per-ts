@@ -1,5 +1,6 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from './Codec';
+import type { DecodedNode } from './DecodedNode';
 import {
   encodeNormallySmallNumber,
   decodeNormallySmallNumber,
@@ -176,6 +177,122 @@ export class SequenceCodec implements Codec<Record<string, unknown>> {
     }
 
     return result;
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    const bitOffset = buffer.offset;
+    const fields: Record<string, DecodedNode> = {};
+
+    // Extension marker bit
+    let hasExtensions = false;
+    if (this.extensible) {
+      hasExtensions = buffer.readBit() === 1;
+    }
+
+    // Read root preamble bitmap
+    const preamble: boolean[] = [];
+    for (let i = 0; i < this.optionalDefaultFields.length; i++) {
+      preamble.push(buffer.readBit() === 1);
+    }
+
+    // Decode root components
+    let optIdx = 0;
+    for (let i = 0; i < this.rootFields.length; i++) {
+      const field = this.rootFields[i];
+      if (field.optional || field.defaultValue !== undefined) {
+        const isPresent = preamble[optIdx++];
+        if (isPresent) {
+          const child = field.codec.decodeWithMetadata(buffer);
+          child.meta.optional = field.optional;
+          child.meta.present = true;
+          fields[field.name] = child;
+        } else if (field.defaultValue !== undefined) {
+          fields[field.name] = {
+            value: field.defaultValue,
+            meta: {
+              bitOffset: buffer.offset,
+              bitLength: 0,
+              rawBytes: new Uint8Array(0),
+              codec: field.codec,
+              optional: field.optional,
+              present: false,
+              isDefault: true,
+            },
+          };
+        } else {
+          // OPTIONAL, not present
+          fields[field.name] = {
+            value: undefined,
+            meta: {
+              bitOffset: buffer.offset,
+              bitLength: 0,
+              rawBytes: new Uint8Array(0),
+              codec: field.codec,
+              optional: true,
+              present: false,
+            },
+          };
+        }
+      } else {
+        // Mandatory
+        const child = field.codec.decodeWithMetadata(buffer);
+        child.meta.present = true;
+        fields[field.name] = child;
+      }
+    }
+
+    // Decode extension additions
+    if (hasExtensions) {
+      const extCount = decodeNormallySmallNumber(buffer) + 1;
+
+      // Read extension presence bitmap
+      const extPreamble: boolean[] = [];
+      for (let i = 0; i < extCount; i++) {
+        extPreamble.push(buffer.readBit() === 1);
+      }
+
+      // Decode present extension fields
+      for (let i = 0; i < extCount; i++) {
+        if (extPreamble[i]) {
+          const byteLen = decodeUnconstrainedLength(buffer);
+          const bytes = buffer.readOctets(byteLen);
+          if (i < this.extFields.length) {
+            const tmp = BitBuffer.from(bytes);
+            const child = this.extFields[i].codec.decodeWithMetadata(tmp);
+            child.meta.optional = this.extFields[i].optional;
+            child.meta.present = true;
+            child.meta.isExtension = true;
+            fields[this.extFields[i].name] = child;
+          }
+          // Unknown extensions are silently skipped
+        } else if (i < this.extFields.length) {
+          const extField = this.extFields[i];
+          fields[extField.name] = {
+            value: undefined,
+            meta: {
+              bitOffset: buffer.offset,
+              bitLength: 0,
+              rawBytes: new Uint8Array(0),
+              codec: extField.codec,
+              optional: true,
+              present: false,
+              isExtension: true,
+            },
+          };
+        }
+      }
+    }
+
+    const bitLength = buffer.offset - bitOffset;
+    return {
+      value: fields,
+      meta: {
+        bitOffset,
+        bitLength,
+        rawBytes: buffer.extractBits(bitOffset, bitLength),
+        codec: this,
+      },
+    };
   }
 
   private isDefaultValue(field: SequenceField, value: unknown): boolean {

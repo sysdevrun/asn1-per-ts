@@ -1,5 +1,6 @@
 import { BitBuffer } from '../BitBuffer';
 import { Codec } from './Codec';
+import type { DecodedNode } from './DecodedNode';
 import {
   encodeConstrainedWholeNumber,
   decodeConstrainedWholeNumber,
@@ -120,5 +121,66 @@ export class ChoiceCodec implements Codec<ChoiceValue> {
       : 0;
     const alt = this.rootAlts[idx];
     return { key: alt.name, value: alt.codec.decode(buffer) };
+  }
+
+  decodeWithMetadata(buffer: BitBuffer): DecodedNode {
+    const bitOffset = buffer.offset;
+
+    if (this.extensible) {
+      const extBit = buffer.readBit();
+      if (extBit === 0) {
+        const idx = this.rootAlts.length > 1
+          ? decodeConstrainedWholeNumber(buffer, 0, this.rootAlts.length - 1)
+          : 0;
+        const alt = this.rootAlts[idx];
+        const childNode = alt.codec.decodeWithMetadata(buffer);
+        const bitLength = buffer.offset - bitOffset;
+        return {
+          value: { key: alt.name, value: childNode },
+          meta: {
+            bitOffset,
+            bitLength,
+            rawBytes: buffer.extractBits(bitOffset, bitLength),
+            codec: this,
+          },
+        };
+      }
+      const extIdx = decodeNormallySmallNumber(buffer);
+      if (extIdx >= this.extAlts.length) {
+        throw new Error(`Extension index ${extIdx} out of range for CHOICE`);
+      }
+      // Decode as open type
+      const byteLen = decodeUnconstrainedLength(buffer);
+      const bytes = buffer.readOctets(byteLen);
+      const tmp = BitBuffer.from(bytes);
+      const alt = this.extAlts[extIdx];
+      const childNode = alt.codec.decodeWithMetadata(tmp);
+      const bitLength = buffer.offset - bitOffset;
+      return {
+        value: { key: alt.name, value: childNode },
+        meta: {
+          bitOffset,
+          bitLength,
+          rawBytes: buffer.extractBits(bitOffset, bitLength),
+          codec: this,
+        },
+      };
+    }
+
+    const idx = this.rootAlts.length > 1
+      ? decodeConstrainedWholeNumber(buffer, 0, this.rootAlts.length - 1)
+      : 0;
+    const alt = this.rootAlts[idx];
+    const childNode = alt.codec.decodeWithMetadata(buffer);
+    const bitLength = buffer.offset - bitOffset;
+    return {
+      value: { key: alt.name, value: childNode },
+      meta: {
+        bitOffset,
+        bitLength,
+        rawBytes: buffer.extractBits(bitOffset, bitLength),
+        codec: this,
+      },
+    };
   }
 }
