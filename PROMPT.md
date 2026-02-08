@@ -94,3 +94,11 @@ add the conversions with ASN parser and encoding and decoding for real-world ASN
 ## OBJECT IDENTIFIER codec implementation
 
 Implement native OBJECT IDENTIFIER support for PER encoding/decoding. Create ObjectIdentifierCodec that encodes/decodes OID dot-notation strings using BER contents octets (X.690 §8.19) wrapped in PER unconstrained length determinant (X.691 §23). Add OBJECT IDENTIFIER to SchemaNode union and SchemaBuilder. Change default objectIdentifierHandling from 'error' to 'native'. Add end-to-end ASN.1 parse/encode/decode roundtrip tests including SEQUENCE with optional OID fields, CHOICE with OID alternatives, SEQUENCE OF OID, and the UIC barcode schema with all 4 OID fields.
+
+## Generate UIC barcode ASN.1 schemas
+
+Download both UIC barcode ASN.1 files (uicBarcodeHeader_v2.0.1.asn and uicRailTicketData_v3.0.5.asn) and generate SchemaNode JSON schemas using the ASN.1 parser. Create a dedicated `schemas/uic-barcode/` directory to save the resulting schemas. Add a README in this directory with links to each original ASN.1 source. Add a link to this README in the main README. Do not save or commit the ASN.1 source files.
+
+## Recursive schema unit tests
+
+Create specific unit tests in both the ASN.1 parser/converter and the encoder to check recursive schemas are supported. For the encoder, write at least a document that has 3 deep levels of recursivity, encode and decode it to check it works as expected.

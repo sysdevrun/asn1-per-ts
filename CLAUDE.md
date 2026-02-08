@@ -19,6 +19,7 @@ per-unaligned-ts is a TypeScript npm module for encoding and decoding ASN.1 PER 
 - `src/parser/types.ts` - TypeScript types for the ASN.1 AST
 - `src/index.ts` - Public barrel exports
 - `tests/` - Jest unit tests mirroring the src structure
+- `schemas/` - Pre-generated SchemaNode JSON files from real-world ASN.1 specifications
 - `website/` - React + TypeScript + TailwindCSS demo app (Vite, deployed to GitHub Pages)
 
 ## Commands

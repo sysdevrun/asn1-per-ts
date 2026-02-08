@@ -132,6 +132,10 @@ Key distinction: providing an empty array (`extensionFields: []`) marks the type
 | `SEQUENCE` | Ordered fields with OPTIONAL/DEFAULT support |
 | `SEQUENCE OF` | Homogeneous list with size constraints |
 
+## Pre-generated Schemas
+
+The [`schemas/`](./schemas/uic-barcode/) directory contains pre-generated `SchemaNode` JSON files for real-world ASN.1 specifications, ready for use with `SchemaCodec` or `SchemaBuilder.buildAll()`. See the [UIC Barcode schemas README](./schemas/uic-barcode/README.md) for details.
+
 ## Development
 
 ```bash

@@ -15,7 +15,9 @@ import * as path from 'path';
 import { parseAsn1Module } from '../../src/parser/AsnParser';
 import { convertModuleToSchemaNodes } from '../../src/parser/toSchemaNode';
 import { SchemaCodec } from '../../src/schema/SchemaCodec';
+import { SchemaBuilder } from '../../src/schema/SchemaBuilder';
 import type { SchemaNode } from '../../src/schema/SchemaBuilder';
+import { BitBuffer } from '../../src/BitBuffer';
 
 /**
  * ASN.1 module combining the Intercode-specific types:
@@ -415,6 +417,212 @@ describe('End-to-end: ASN.1 parse -> schema -> PER encode/decode', () => {
       const decoded = codec.decodeFromHex(codec.encodeToHex(value)) as Record<string, unknown>;
       expect(decoded).toEqual(value);
       expect(decoded.level2Signature).toBeUndefined();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Recursive type: ASN.1 parse -> schema -> encode/decode round-trip
+  // ---------------------------------------------------------------------------
+  describe('Recursive types (ASN.1 -> schema -> encode/decode)', () => {
+    const RECURSIVE_MODULE = `
+RecursiveTest DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+  -- A tree node that references itself via children
+  TreeNode ::= SEQUENCE {
+    label   IA5String,
+    value   INTEGER (0..9999),
+    children SEQUENCE (SIZE (0..10)) OF TreeNode OPTIONAL
+  }
+
+  -- A route structure similar to UIC ViaStationType with two recursive fields
+  RouteNode ::= SEQUENCE {
+    stationId INTEGER (1..9999999),
+    border    BOOLEAN,
+    alternativeRoutes SEQUENCE (SIZE (0..5)) OF RouteNode OPTIONAL,
+    route     SEQUENCE (SIZE (0..5)) OF RouteNode OPTIONAL
+  }
+
+END
+    `;
+
+    let schemas: Record<string, SchemaNode>;
+    let codecs: Record<string, import('../../src/codecs/Codec').Codec<unknown>>;
+
+    beforeAll(() => {
+      const module = parseAsn1Module(RECURSIVE_MODULE);
+      schemas = convertModuleToSchemaNodes(module);
+      codecs = SchemaBuilder.buildAll(schemas);
+    });
+
+    it('parses recursive types without infinite recursion', () => {
+      expect(schemas['TreeNode']).toBeDefined();
+      expect(schemas['RouteNode']).toBeDefined();
+    });
+
+    it('produces $ref nodes for recursive references', () => {
+      const tree = schemas['TreeNode'] as any;
+      expect(tree.fields[2].schema.item).toEqual({ type: '$ref', ref: 'TreeNode' });
+
+      const route = schemas['RouteNode'] as any;
+      expect(route.fields[2].schema.item).toEqual({ type: '$ref', ref: 'RouteNode' });
+      expect(route.fields[3].schema.item).toEqual({ type: '$ref', ref: 'RouteNode' });
+    });
+
+    it('builds codecs via buildAll without errors', () => {
+      expect(codecs['TreeNode']).toBeDefined();
+      expect(codecs['RouteNode']).toBeDefined();
+    });
+
+    it('round-trips a leaf TreeNode (depth 0)', () => {
+      const codec = codecs['TreeNode'];
+      const leaf = { label: 'leaf', value: 42 };
+
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, leaf);
+      buf.reset();
+      expect(codec.decode(buf)).toEqual(leaf);
+    });
+
+    it('round-trips a TreeNode with 1 level of children (depth 1)', () => {
+      const codec = codecs['TreeNode'];
+      const doc = {
+        label: 'root',
+        value: 1,
+        children: [
+          { label: 'a', value: 10 },
+          { label: 'b', value: 20 },
+        ],
+      };
+
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, doc);
+      buf.reset();
+      expect(codec.decode(buf)).toEqual(doc);
+    });
+
+    it('round-trips a TreeNode with 3 levels of nesting', () => {
+      const codec = codecs['TreeNode'];
+
+      // Level 0: root
+      //   Level 1: child-A
+      //     Level 2: grandchild-A1
+      //       Level 3: great-gc-A1a (leaf)
+      //       Level 3: great-gc-A1b (leaf)
+      //     Level 2: grandchild-A2 (leaf)
+      //   Level 1: child-B
+      //     Level 2: grandchild-B1
+      //       Level 3: great-gc-B1a (leaf)
+      const doc = {
+        label: 'root',
+        value: 0,
+        children: [
+          {
+            label: 'child-A',
+            value: 1,
+            children: [
+              {
+                label: 'gc-A1',
+                value: 11,
+                children: [
+                  { label: 'ggc-A1a', value: 111 },
+                  { label: 'ggc-A1b', value: 112 },
+                ],
+              },
+              { label: 'gc-A2', value: 12 },
+            ],
+          },
+          {
+            label: 'child-B',
+            value: 2,
+            children: [
+              {
+                label: 'gc-B1',
+                value: 21,
+                children: [
+                  { label: 'ggc-B1a', value: 211 },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, doc);
+      buf.reset();
+      const decoded = codec.decode(buf);
+      expect(decoded).toEqual(doc);
+    });
+
+    it('round-trips a RouteNode with 3 levels using both recursive fields', () => {
+      const codec = codecs['RouteNode'];
+
+      // Simulates a real railway route structure:
+      // Root station (id=8000105, Frankfurt)
+      //   route: [station 8000261 (Mannheim)]
+      //     alternativeRoutes: [station 8000244 (Mainz), station 8000250 (Wiesbaden)]
+      //       each Mainz/Wiesbaden has a route going to station 8000105 again (leaf, no recursion)
+      //     route: [station 8000191 (Karlsruhe)]
+      //       route: [station 8000284 (Stuttgart, leaf)]
+      const doc = {
+        stationId: 8000105,
+        border: false,
+        route: [
+          {
+            stationId: 8000261,
+            border: false,
+            alternativeRoutes: [
+              {
+                stationId: 8000244,
+                border: false,
+                route: [
+                  { stationId: 8000105, border: false },
+                ],
+              },
+              {
+                stationId: 8000250,
+                border: false,
+                route: [
+                  { stationId: 8000105, border: false },
+                ],
+              },
+            ],
+            route: [
+              {
+                stationId: 8000191,
+                border: false,
+                route: [
+                  { stationId: 8000284, border: false },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, doc);
+      buf.reset();
+      const decoded = codec.decode(buf);
+      expect(decoded).toEqual(doc);
+    });
+
+    it('encoded output is deterministic (same input = same bytes)', () => {
+      const codec = codecs['TreeNode'];
+      const doc = {
+        label: 'det',
+        value: 99,
+        children: [
+          { label: 'x', value: 1, children: [{ label: 'y', value: 2 }] },
+        ],
+      };
+
+      const buf1 = BitBuffer.alloc();
+      codec.encode(buf1, doc);
+      const buf2 = BitBuffer.alloc();
+      codec.encode(buf2, doc);
+
+      expect(buf1.toHex()).toBe(buf2.toHex());
     });
   });
 

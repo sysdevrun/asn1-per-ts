@@ -26,10 +26,13 @@ export function convertModuleToSchemaNodes(
     typeMap.set(assignment.name, assignment.type);
   }
 
+  // Track which named types are currently being resolved (cycle detection)
+  const resolving = new Set<string>();
+
   // Second pass: convert each assignment to SchemaNode
   const result: Record<string, SchemaNode> = {};
   for (const assignment of module.assignments) {
-    result[assignment.name] = convertType(assignment.type, typeMap);
+    result[assignment.name] = convertType(assignment.type, typeMap, resolving, assignment.name);
   }
   return result;
 }
@@ -37,6 +40,8 @@ export function convertModuleToSchemaNodes(
 function convertType(
   type: AsnType,
   typeMap: Map<string, AsnType>,
+  resolving: Set<string>,
+  currentTypeName?: string,
 ): SchemaNode {
   switch (type.kind) {
     case 'BOOLEAN':
@@ -72,13 +77,20 @@ function convertType(
     }
 
     case 'SEQUENCE': {
-      const fields = convertFields(type.fields, typeMap);
+      // If we're resolving a named type, mark it as in-progress before processing fields
+      if (currentTypeName) {
+        resolving.add(currentTypeName);
+      }
+      const fields = convertFields(type.fields, typeMap, resolving);
       const node: SchemaNode & { extensionFields?: unknown[] } = {
         type: 'SEQUENCE',
         fields,
       };
       if (type.extensionFields !== undefined) {
-        node.extensionFields = convertFields(type.extensionFields, typeMap);
+        node.extensionFields = convertFields(type.extensionFields, typeMap, resolving);
+      }
+      if (currentTypeName) {
+        resolving.delete(currentTypeName);
       }
       return node as SchemaNode;
     }
@@ -86,13 +98,16 @@ function convertType(
     case 'SEQUENCE OF':
       return {
         type: 'SEQUENCE OF',
-        item: convertType(type.itemType, typeMap),
+        item: convertType(type.itemType, typeMap, resolving),
       };
 
     case 'CHOICE': {
+      if (currentTypeName) {
+        resolving.add(currentTypeName);
+      }
       const alternatives = type.alternatives.map(a => ({
         name: a.name,
-        schema: convertType(a.type, typeMap),
+        schema: convertType(a.type, typeMap, resolving),
       }));
       const node: SchemaNode & { extensionAlternatives?: unknown[] } = {
         type: 'CHOICE',
@@ -101,22 +116,29 @@ function convertType(
       if (type.extensionAlternatives !== undefined) {
         node.extensionAlternatives = type.extensionAlternatives.map(a => ({
           name: a.name,
-          schema: convertType(a.type, typeMap),
+          schema: convertType(a.type, typeMap, resolving),
         }));
+      }
+      if (currentTypeName) {
+        resolving.delete(currentTypeName);
       }
       return node as SchemaNode;
     }
 
     case 'TypeReference': {
+      // If this type is currently being resolved, emit a $ref to break the cycle
+      if (resolving.has(type.name)) {
+        return { type: '$ref', ref: type.name };
+      }
       const resolved = typeMap.get(type.name);
       if (!resolved) {
         throw new Error(`Unresolved type reference: ${type.name}`);
       }
-      return convertType(resolved, typeMap);
+      return convertType(resolved, typeMap, resolving, type.name);
     }
 
     case 'ConstrainedType':
-      return applyConstraint(type, typeMap);
+      return applyConstraint(type, typeMap, resolving);
 
     default:
       throw new Error(`Unsupported ASN.1 type: ${(type as { kind: string }).kind}`);
@@ -126,8 +148,9 @@ function convertType(
 function applyConstraint(
   constrained: AsnConstrainedType,
   typeMap: Map<string, AsnType>,
+  resolving: Set<string>,
 ): SchemaNode {
-  const base = convertType(constrained.baseType, typeMap);
+  const base = convertType(constrained.baseType, typeMap, resolving);
   const constraint = constrained.constraint;
 
   if (constraint.constraintType === 'value') {
@@ -201,11 +224,12 @@ function applySizeConstraint(base: SchemaNode, constraint: AsnConstraint): Schem
 function convertFields(
   fields: AsnField[],
   typeMap: Map<string, AsnType>,
+  resolving: Set<string>,
 ): Array<{ name: string; schema: SchemaNode; optional?: boolean; defaultValue?: unknown }> {
   const result: Array<{ name: string; schema: SchemaNode; optional?: boolean; defaultValue?: unknown }> = [];
 
   for (const field of fields) {
-    const schema = convertType(field.type, typeMap);
+    const schema = convertType(field.type, typeMap, resolving);
     const entry: { name: string; schema: SchemaNode; optional?: boolean; defaultValue?: unknown } = {
       name: field.name,
       schema,

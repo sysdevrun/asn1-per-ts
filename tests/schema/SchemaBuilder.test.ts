@@ -159,4 +159,263 @@ describe('SchemaBuilder', () => {
   it('throws for unknown type', () => {
     expect(() => SchemaBuilder.build({ type: 'UNKNOWN' } as any)).toThrow();
   });
+
+  it('throws when build() encounters $ref without registry', () => {
+    expect(() => SchemaBuilder.build({ type: '$ref', ref: 'SomeType' })).toThrow(
+      'Cannot resolve $ref "SomeType" without a schema registry'
+    );
+  });
+
+  describe('buildAll - recursive schemas', () => {
+    it('resolves $ref in a simple recursive tree structure', () => {
+      const schemas: Record<string, SchemaNode> = {
+        TreeNode: {
+          type: 'SEQUENCE',
+          fields: [
+            { name: 'value', schema: { type: 'INTEGER', min: 0, max: 255 } },
+            {
+              name: 'children',
+              schema: {
+                type: 'SEQUENCE OF',
+                item: { type: '$ref', ref: 'TreeNode' },
+                minSize: 0,
+                maxSize: 10,
+              },
+              optional: true,
+            },
+          ],
+        },
+      };
+
+      const codecs = SchemaBuilder.buildAll(schemas);
+      expect(codecs['TreeNode']).toBeDefined();
+    });
+
+    it('encodes and decodes a leaf node (no children)', () => {
+      const schemas: Record<string, SchemaNode> = {
+        TreeNode: {
+          type: 'SEQUENCE',
+          fields: [
+            { name: 'value', schema: { type: 'INTEGER', min: 0, max: 255 } },
+            {
+              name: 'children',
+              schema: {
+                type: 'SEQUENCE OF',
+                item: { type: '$ref', ref: 'TreeNode' },
+                minSize: 0,
+                maxSize: 10,
+              },
+              optional: true,
+            },
+          ],
+        },
+      };
+
+      const codecs = SchemaBuilder.buildAll(schemas);
+      const codec = codecs['TreeNode'];
+
+      const leaf = { value: 42 };
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, leaf);
+      buf.reset();
+      expect(codec.decode(buf)).toEqual(leaf);
+    });
+
+    it('encodes and decodes 1 level deep recursion', () => {
+      const schemas: Record<string, SchemaNode> = {
+        TreeNode: {
+          type: 'SEQUENCE',
+          fields: [
+            { name: 'value', schema: { type: 'INTEGER', min: 0, max: 255 } },
+            {
+              name: 'children',
+              schema: {
+                type: 'SEQUENCE OF',
+                item: { type: '$ref', ref: 'TreeNode' },
+                minSize: 0,
+                maxSize: 10,
+              },
+              optional: true,
+            },
+          ],
+        },
+      };
+
+      const codecs = SchemaBuilder.buildAll(schemas);
+      const codec = codecs['TreeNode'];
+
+      const doc = {
+        value: 1,
+        children: [
+          { value: 10 },
+          { value: 20 },
+        ],
+      };
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, doc);
+      buf.reset();
+      expect(codec.decode(buf)).toEqual(doc);
+    });
+
+    it('encodes and decodes 3 levels deep recursion', () => {
+      const schemas: Record<string, SchemaNode> = {
+        TreeNode: {
+          type: 'SEQUENCE',
+          fields: [
+            { name: 'value', schema: { type: 'INTEGER', min: 0, max: 255 } },
+            {
+              name: 'children',
+              schema: {
+                type: 'SEQUENCE OF',
+                item: { type: '$ref', ref: 'TreeNode' },
+                minSize: 0,
+                maxSize: 10,
+              },
+              optional: true,
+            },
+          ],
+        },
+      };
+
+      const codecs = SchemaBuilder.buildAll(schemas);
+      const codec = codecs['TreeNode'];
+
+      // Level 0: root (value=1)
+      //   Level 1: child A (value=10)
+      //     Level 2: grandchild A1 (value=100)
+      //       Level 3: great-grandchild A1a (value=200, leaf)
+      //       Level 3: great-grandchild A1b (value=201, leaf)
+      //     Level 2: grandchild A2 (value=101, leaf)
+      //   Level 1: child B (value=20, leaf)
+      const doc = {
+        value: 1,
+        children: [
+          {
+            value: 10,
+            children: [
+              {
+                value: 100,
+                children: [
+                  { value: 200 },
+                  { value: 201 },
+                ],
+              },
+              { value: 101 },
+            ],
+          },
+          { value: 20 },
+        ],
+      };
+
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, doc);
+      buf.reset();
+      const decoded = codec.decode(buf);
+      expect(decoded).toEqual(doc);
+    });
+
+    it('encodes and decodes multiple recursive fields (ViaStation-like)', () => {
+      const schemas: Record<string, SchemaNode> = {
+        ViaStation: {
+          type: 'SEQUENCE',
+          fields: [
+            { name: 'stationId', schema: { type: 'INTEGER', min: 1, max: 9999 } },
+            {
+              name: 'alternativeRoutes',
+              schema: {
+                type: 'SEQUENCE OF',
+                item: { type: '$ref', ref: 'ViaStation' },
+                minSize: 0,
+                maxSize: 5,
+              },
+              optional: true,
+            },
+            {
+              name: 'route',
+              schema: {
+                type: 'SEQUENCE OF',
+                item: { type: '$ref', ref: 'ViaStation' },
+                minSize: 0,
+                maxSize: 5,
+              },
+              optional: true,
+            },
+          ],
+        },
+      };
+
+      const codecs = SchemaBuilder.buildAll(schemas);
+      const codec = codecs['ViaStation'];
+
+      // 3 levels deep:
+      // Root station 1000
+      //   route: [station 2000 -> route: [station 3000 -> alternativeRoutes: [station 4000, station 4001]]]
+      const doc = {
+        stationId: 1000,
+        route: [
+          {
+            stationId: 2000,
+            route: [
+              {
+                stationId: 3000,
+                alternativeRoutes: [
+                  { stationId: 4000 },
+                  { stationId: 4001 },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, doc);
+      buf.reset();
+      const decoded = codec.decode(buf);
+      expect(decoded).toEqual(doc);
+    });
+
+    it('resolves $ref across multiple types in the registry', () => {
+      const schemas: Record<string, SchemaNode> = {
+        Container: {
+          type: 'SEQUENCE',
+          fields: [
+            { name: 'label', schema: { type: 'IA5String' } },
+            { name: 'item', schema: { type: '$ref', ref: 'Item' } },
+          ],
+        },
+        Item: {
+          type: 'SEQUENCE',
+          fields: [
+            { name: 'id', schema: { type: 'INTEGER', min: 0, max: 255 } },
+          ],
+        },
+      };
+
+      const codecs = SchemaBuilder.buildAll(schemas);
+      const codec = codecs['Container'];
+
+      const doc = { label: 'test', item: { id: 42 } };
+      const buf = BitBuffer.alloc();
+      codec.encode(buf, doc);
+      buf.reset();
+      expect(codec.decode(buf)).toEqual(doc);
+    });
+
+    it('throws for unresolved $ref', () => {
+      const schemas: Record<string, SchemaNode> = {
+        MyType: {
+          type: 'SEQUENCE',
+          fields: [
+            { name: 'data', schema: { type: '$ref', ref: 'NonExistent' } },
+          ],
+        },
+      };
+
+      const codecs = SchemaBuilder.buildAll(schemas);
+      const buf = BitBuffer.alloc();
+      // LazyCodec should throw when trying to resolve
+      expect(() => codecs['MyType'].encode(buf, { data: 'anything' })).toThrow('Unresolved $ref: "NonExistent"');
+    });
+  });
 });
