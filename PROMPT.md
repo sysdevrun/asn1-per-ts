@@ -121,3 +121,7 @@ Download uicRailTicketData_v2.0.3.asn from https://github.com/UnionInternational
 ## Update schema versions
 
 For each schema file already present in the schemas directory, fetch the latest minor version of every major version of that schema type from https://github.com/UnionInternationalCheminsdeFer/UIC-barcode/tree/master/misc. Convert the ASN.1 source using the CLI tool and save the resulting schema JSON. Update the schemas README to reference the new files and add a Version column with the full version number.
+
+## Add examples documentation
+
+Create a new examples/ directory with a schema parser markdown file with examples of usage and explanation of options. Do the same thing for decoding binary data encoded with PER unaligned. Do the same thing for encoding object to binary. Use files in CLI and the classes referenced to find usage. Reference every file in the README and CLAUDE files.
