@@ -4,26 +4,21 @@
 
 per-unaligned-ts is a TypeScript npm module for encoding and decoding ASN.1 PER (Packed Encoding Rules) unaligned data. It provides bit-level buffer management, constraint-based primitive codecs, and a schema-driven API for encoding/decoding JSON objects.
 
+**The `intercode6-ts/` module is the main encoding/decoding library built on top of per-unaligned-ts.** Most encoding and decoding work should use intercode6-ts — understanding the low-level primitives in `src/` is usually not required.
+
+The `examples/` directory contains guides that should be sufficient for most usage.
+
 ## Project structure
 
-- `src/BitBuffer.ts` - Bit-level read/write buffer (MSB-first, auto-growing)
-- `src/helpers.ts` - PER encoding primitives (constrained whole numbers, length determinants)
-- `src/codecs/` - Individual type codecs (Boolean, Integer, Enumerated, BitString, OctetString, UTF8String, Null, Choice, Sequence, SequenceOf)
-- `src/codecs/Codec.ts` - Base `Codec<T>` interface
-- `src/schema/SchemaBuilder.ts` - Builds codec trees from JSON `SchemaNode` definitions
-- `src/schema/SchemaCodec.ts` - High-level encode/decode with hex helpers
-- `src/parser/` - ASN.1 text notation parser (uses peggy PEG grammar)
-- `src/parser/AsnParser.ts` - Parses ASN.1 module text into an AST
-- `src/parser/toSchemaNode.ts` - Converts ASN.1 AST to `SchemaNode` for PER encoding/decoding
-- `src/parser/grammar.ts` - PEG grammar for ASN.1 notation subset
-- `src/parser/types.ts` - TypeScript types for the ASN.1 AST
-- `src/index.ts` - Public barrel exports
+- `intercode6-ts/` - **Intercode Part 6 encoding/decoding npm module** (high-level API for real-world use)
+- `src/` - Low-level PER primitives (bit buffers, codecs, schema builder, ASN.1 parser)
 - `tests/` - Jest unit tests mirroring the src structure
 - `schemas/` - Pre-generated SchemaNode JSON files from real-world ASN.1 specifications
-- `examples/` - Usage guides and documentation
+- `examples/` - Usage guides (encoding, decoding, schema parsing)
   - `examples/schema-parser.md` - Parsing ASN.1 text to SchemaNode, constraint options, CLI usage
   - `examples/encoding.md` - Encoding objects to PER unaligned binary (high-level and low-level APIs)
   - `examples/decoding.md` - Decoding PER unaligned binary back to objects (high-level and low-level APIs)
+- `cli/` - CLI scripts (schema generation, UIC barcode decoding)
 - `website/` - React + TypeScript + TailwindCSS demo app (Vite, deployed to GitHub Pages)
 
 ## Commands
