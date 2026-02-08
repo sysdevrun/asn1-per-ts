@@ -129,3 +129,7 @@ Create a new examples/ directory with a schema parser markdown file with example
 ## Intercode 6 decoder/generator module
 
 Read the CLI for decoding intercode6 tickets. Create in an intercode6-ts directory a npm module (for both web and node) that decodes binary encoded data. When the module is compiled, the JSON schemas must be embedded in the module. Create TypeScript types for the result. Also create an encoding method. In the website, add a new tab that allows to decode a ticket from hex encoded data showing every detail. Add as example the current fixture. Add a new tab that generates a ticket to hex encoded plus Aztec code. The intercode6-ts module must be added to the website.
+
+## Signature verification plan
+
+Plan what would be needed to implement signature verification for intercode6-ts npm module, both for level 1 and level 2 signatures. Cover: extracting signed data bytes via PER re-encoding of sub-structures, OID-to-algorithm mapping, signature format conversion (raw to DER), public key handling (compressed/uncompressed EC points, SPKI wrapping), level 1 external key lookup interface, proposed API design, dependencies (node:crypto vs @noble/curves), edge cases, and testing strategy.
