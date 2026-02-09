@@ -155,3 +155,7 @@ Read last commit. Update plan in intercode6-ts to implement signature with the f
 ## Add Aztec code reader to website
 
 In the website, add an Aztec code reader library that allows to browse an image from the phone and decode it and convert it to hex encoded data, so hex encoded can be used as UIC ticket encoded data.
+
+## Implement signature verification
+
+implement intercode6-ts/SIGNATURE_VERIFICATION_PLAN.md
