@@ -1,34 +1,44 @@
 /**
  * OID-to-algorithm mapping for UIC barcode signature verification.
  *
- * Maps signing algorithm OIDs to their hash function and signature type,
- * and key algorithm OIDs to their curve or key type.
+ * Only algorithms actually used in UIC barcode processes are included:
+ *
+ * | Process  | Algorithm            | Signature format |
+ * |----------|----------------------|------------------|
+ * | FCB V1   | SHA-1, DSA-1024      | Structured (DER) |
+ * | FCB V2   | SHA-224, DSA-2048    | Raw (r‖s)        |
+ * | FCB V2   | SHA-256, DSA-2048    | Raw (r‖s)        |
+ * | DOSIPAS  | SHA-224, DSA-2048    | Structured (DER) |
+ * | DOSIPAS  | SHA-256, DSA-2048    | Structured (DER) |
+ * | DOSIPAS  | SHA-256, ECDSA-P256  | Structured (DER) |
  */
 
 export interface SigningAlgorithm {
   hash: string;
-  type: 'ECDSA' | 'DSA' | 'RSA';
+  type: 'ECDSA' | 'DSA';
 }
 
 export interface KeyAlgorithm {
-  type: 'EC' | 'RSA';
+  type: 'EC' | 'DSA';
   curve?: string;
 }
 
 const SIGNING_ALGORITHMS: Record<string, SigningAlgorithm> = {
-  '1.2.840.10045.4.3.2': { hash: 'SHA-256', type: 'ECDSA' },
-  '1.2.840.10045.4.3.3': { hash: 'SHA-384', type: 'ECDSA' },
-  '1.2.840.10045.4.3.4': { hash: 'SHA-512', type: 'ECDSA' },
+  // DSA with SHA-1 — FCB V1 (structured)
+  '1.2.840.10040.4.3': { hash: 'SHA-1', type: 'DSA' },
+  // DSA with SHA-224 — FCB V2 (raw), DOSIPAS (structured)
   '2.16.840.1.101.3.4.3.1': { hash: 'SHA-224', type: 'DSA' },
+  // DSA with SHA-256 — FCB V2 (raw), DOSIPAS (structured)
   '2.16.840.1.101.3.4.3.2': { hash: 'SHA-256', type: 'DSA' },
-  '1.2.840.113549.1.1.11': { hash: 'SHA-256', type: 'RSA' },
+  // ECDSA with SHA-256 — DOSIPAS (structured)
+  '1.2.840.10045.4.3.2': { hash: 'SHA-256', type: 'ECDSA' },
 };
 
 const KEY_ALGORITHMS: Record<string, KeyAlgorithm> = {
+  // DSA — used with DSA-512/1024/2048 across FCB V1, V2, DOSIPAS
+  '1.2.840.10040.4.1': { type: 'DSA' },
+  // EC P-256 (secp256r1) — used with ECDSA-P256 in DOSIPAS
   '1.2.840.10045.3.1.7': { type: 'EC', curve: 'P-256' },
-  '1.3.132.0.34': { type: 'EC', curve: 'P-384' },
-  '1.3.132.0.35': { type: 'EC', curve: 'P-521' },
-  '1.2.840.113549.1.1.1': { type: 'RSA' },
 };
 
 /** Look up a signing algorithm by OID. Returns undefined if not recognized. */

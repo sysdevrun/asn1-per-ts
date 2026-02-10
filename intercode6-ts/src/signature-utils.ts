@@ -1,11 +1,38 @@
 /**
  * Signature format conversion and public key import utilities.
  *
- * UIC barcodes store ECDSA/DSA signatures as raw (r || s) concatenation.
- * Node.js crypto.verify() expects DER-encoded signatures. This module
- * provides conversion between these formats and public key import helpers.
+ * UIC barcodes use two signature formats depending on the process:
+ * - Raw (r ‖ s): Used by FCB V2 (TLB/FCB V2)
+ * - Structured (DER): Used by FCB V1 and DOSIPAS
+ *
+ * Node.js crypto.verify() expects DER-encoded signatures in all cases.
+ * This module provides detection, conversion, and key import helpers.
  */
 import { createPublicKey, type KeyObject } from 'node:crypto';
+
+// ---------------------------------------------------------------------------
+// DER signature detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Detect whether a signature is already in DER (structured) format.
+ *
+ * DER ECDSA/DSA signatures start with 0x30 (SEQUENCE tag).
+ * Raw (r‖s) signatures start with arbitrary bytes.
+ */
+export function isDerSignature(signature: Uint8Array): boolean {
+  if (signature.length < 2) return false;
+  // SEQUENCE tag = 0x30, followed by length
+  if (signature[0] !== 0x30) return false;
+  // Basic sanity: the declared length should roughly match the actual data
+  const declaredLen = signature[1];
+  // For short-form DER length (≤127), total = 2 + declaredLen
+  if (declaredLen <= 127) {
+    return signature.length === 2 + declaredLen;
+  }
+  // Long-form length (unlikely for signatures but be safe)
+  return true;
+}
 
 // ---------------------------------------------------------------------------
 // DER integer encoding
@@ -36,9 +63,9 @@ function derEncodeInteger(value: Uint8Array): Uint8Array {
 // ---------------------------------------------------------------------------
 
 /**
- * Convert a raw (r || s) ECDSA/DSA signature to DER-encoded format.
+ * Convert a raw (r ‖ s) ECDSA/DSA signature to DER-encoded format.
  *
- * Raw format: r (N bytes) || s (N bytes), total = 2N bytes.
+ * Raw format: r (N bytes) ‖ s (N bytes), total = 2N bytes.
  * DER format: SEQUENCE { INTEGER r, INTEGER s }.
  *
  * @param raw - The raw concatenated signature bytes.
@@ -66,6 +93,19 @@ export function rawSignatureToDer(raw: Uint8Array): Uint8Array {
   return seq;
 }
 
+/**
+ * Ensure a signature is in DER format for Node.js crypto.verify().
+ *
+ * If the signature is already DER (structured), returns it unchanged.
+ * If it is raw (r‖s), converts to DER.
+ */
+export function ensureDerSignature(signature: Uint8Array): Uint8Array {
+  if (isDerSignature(signature)) {
+    return signature;
+  }
+  return rawSignatureToDer(signature);
+}
+
 // ---------------------------------------------------------------------------
 // SPKI DER construction for EC public keys
 // ---------------------------------------------------------------------------
@@ -75,12 +115,10 @@ const EC_PUBLIC_KEY_OID = new Uint8Array([
   0x06, 0x07, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x02, 0x01,
 ]);
 
-/** Named curve OIDs in DER encoding. */
-const CURVE_OIDS: Record<string, Uint8Array> = {
-  'P-256': new Uint8Array([0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07]),
-  'P-384': new Uint8Array([0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x22]),
-  'P-521': new Uint8Array([0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x23]),
-};
+/** Named curve OID for P-256 (secp256r1) in DER encoding. */
+const P256_CURVE_OID = new Uint8Array([
+  0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03, 0x01, 0x07,
+]);
 
 /**
  * Build a SubjectPublicKeyInfo (SPKI) DER structure wrapping a raw EC public
@@ -92,19 +130,14 @@ const CURVE_OIDS: Record<string, Uint8Array> = {
  *     BIT STRING (public key point)
  *   }
  */
-function buildEcSpkiDer(rawPoint: Uint8Array, curve: string): Uint8Array {
-  const curveOid = CURVE_OIDS[curve];
-  if (!curveOid) {
-    throw new Error(`Unsupported EC curve: ${curve}`);
-  }
-
-  // AlgorithmIdentifier SEQUENCE: ecPublicKey OID + curve OID
-  const algIdInnerLen = EC_PUBLIC_KEY_OID.length + curveOid.length;
+function buildEcSpkiDer(rawPoint: Uint8Array): Uint8Array {
+  // AlgorithmIdentifier SEQUENCE: ecPublicKey OID + P-256 curve OID
+  const algIdInnerLen = EC_PUBLIC_KEY_OID.length + P256_CURVE_OID.length;
   const algId = new Uint8Array(2 + algIdInnerLen);
   algId[0] = 0x30; // SEQUENCE
   algId[1] = algIdInnerLen;
   algId.set(EC_PUBLIC_KEY_OID, 2);
-  algId.set(curveOid, 2 + EC_PUBLIC_KEY_OID.length);
+  algId.set(P256_CURVE_OID, 2 + EC_PUBLIC_KEY_OID.length);
 
   // BIT STRING wrapping the public key point
   // BIT STRING = tag(1) + length(1+) + unused-bits(1) + content
@@ -127,19 +160,34 @@ function buildEcSpkiDer(rawPoint: Uint8Array, curve: string): Uint8Array {
 }
 
 /**
- * Import a raw EC public key point as a Node.js KeyObject.
+ * Import a raw EC P-256 public key point as a Node.js KeyObject.
  *
  * Accepts both uncompressed (0x04 prefix) and compressed (0x02/0x03 prefix)
  * points. Node.js handles decompression internally.
  *
  * @param rawPoint - The raw EC public key bytes.
- * @param curve - The named curve, e.g. "P-256", "P-384", "P-521".
  * @returns A Node.js KeyObject for use with crypto.verify().
  */
-export function importEcPublicKey(rawPoint: Uint8Array, curve: string): KeyObject {
-  const spki = buildEcSpkiDer(rawPoint, curve);
+export function importEcPublicKey(rawPoint: Uint8Array): KeyObject {
+  const spki = buildEcSpkiDer(rawPoint);
   return createPublicKey({
     key: Buffer.from(spki),
+    format: 'der',
+    type: 'spki',
+  });
+}
+
+/**
+ * Import a DER-encoded SubjectPublicKeyInfo (SPKI) public key.
+ *
+ * Used for DSA public keys which are stored as full SPKI blobs in the barcode.
+ *
+ * @param spkiDer - The DER-encoded SPKI public key bytes.
+ * @returns A Node.js KeyObject for use with crypto.verify().
+ */
+export function importSpkiPublicKey(spkiDer: Uint8Array): KeyObject {
+  return createPublicKey({
+    key: Buffer.from(spkiDer),
     format: 'der',
     type: 'spki',
   });
@@ -149,25 +197,19 @@ export function importEcPublicKey(rawPoint: Uint8Array, curve: string): KeyObjec
 // Signature size validation
 // ---------------------------------------------------------------------------
 
-/** Expected raw signature sizes (r || s) for EC curves. */
-const EC_SIGNATURE_SIZES: Record<string, number> = {
-  'P-256': 64,
-  'P-384': 96,
-  'P-521': 132,
-};
+/** Expected raw signature size (r ‖ s) for ECDSA P-256: 32 + 32 = 64 bytes. */
+const P256_RAW_SIGNATURE_SIZE = 64;
 
 /**
- * Validate the size of a raw ECDSA signature for a given curve.
+ * Validate the size of a raw ECDSA P-256 signature.
  * Returns an error message if invalid, or undefined if valid.
  */
 export function validateEcSignatureSize(
   signature: Uint8Array,
-  curve: string,
 ): string | undefined {
-  const expected = EC_SIGNATURE_SIZES[curve];
-  if (expected === undefined) return undefined; // unknown curve, skip validation
-  if (signature.length !== expected) {
-    return `Expected ${expected}-byte signature for ${curve}, got ${signature.length} bytes`;
+  if (isDerSignature(signature)) return undefined; // DER is variable-length, skip
+  if (signature.length !== P256_RAW_SIGNATURE_SIZE) {
+    return `Expected ${P256_RAW_SIGNATURE_SIZE}-byte raw signature for P-256, got ${signature.length} bytes`;
   }
   return undefined;
 }
