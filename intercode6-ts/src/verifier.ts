@@ -5,19 +5,18 @@
  * - Level 2: Uses the embedded level2PublicKey (self-contained).
  * - Level 1: Requires an externally provided public key (via options).
  *
- * Handles both raw (r‖s) and structured (DER) signature formats:
- * - FCB V1: structured (DER)
- * - FCB V2: raw (r‖s)
- * - DOSIPAS: structured (DER)
+ * Signature format is determined by header version:
+ * - Header V1 (U1) → FCB V1 → structured (DER)
+ * - Header V2 (U2) → FCB V2 / DOSIPAS → raw (r‖s)
  *
  * Uses Node.js crypto for ECDSA/DSA signature verification.
  */
 import { verify, type KeyObject } from 'node:crypto';
 
-import { extractSignedData } from './signed-data';
+import { extractSignedData, type ExtractedSignedData } from './signed-data';
 import { getSigningAlgorithm, getKeyAlgorithm } from './oids';
 import {
-  ensureDerSignature,
+  rawSignatureToDer,
   importEcPublicKey,
   importSpkiPublicKey,
   validateEcSignatureSize,
@@ -33,14 +32,26 @@ import type {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Header V1 signatures are structured (DER), already accepted by Node.js.
+ * Header V2 signatures are raw (r‖s), need conversion to DER.
+ */
+function signatureToDer(signature: Uint8Array, headerVersion: number): Uint8Array {
+  if (headerVersion >= 2) {
+    return rawSignatureToDer(signature);
+  }
+  // V1: already DER
+  return signature;
+}
+
 function verifyWithCrypto(
   data: Uint8Array,
   signature: Uint8Array,
   publicKey: KeyObject,
   hash: string,
+  headerVersion: number,
 ): boolean {
-  // Auto-detect raw vs DER and convert if needed
-  const sig = ensureDerSignature(signature);
+  const sig = signatureToDer(signature, headerVersion);
   return verify(hash, data, publicKey, Buffer.from(sig));
 }
 
@@ -108,7 +119,6 @@ export async function verifyLevel2Signature(
       };
     }
 
-    // Determine the key algorithm to import the embedded public key
     const keyAlgOid = data.level2KeyAlg;
     if (!keyAlgOid) {
       return { valid: false, error: 'Missing level 2 key algorithm OID' };
@@ -118,8 +128,8 @@ export async function verifyLevel2Signature(
       return { valid: false, error: `Unknown level 2 key algorithm: ${keyAlgOid}` };
     }
 
-    // Validate signature size for EC keys (only when raw format)
-    if (keyAlg.type === 'EC') {
+    // Validate raw signature size for EC keys (V2 only — V1 is DER)
+    if (keyAlg.type === 'EC' && data.headerVersion >= 2) {
       const sizeError = validateEcSignatureSize(data.level2Signature);
       if (sizeError) {
         return { valid: false, error: sizeError };
@@ -132,6 +142,7 @@ export async function verifyLevel2Signature(
       data.level2Signature,
       publicKey,
       sigAlg.hash,
+      data.headerVersion,
     );
 
     return { valid, algorithm: `${sigAlg.type} with ${sigAlg.hash}` };
@@ -174,9 +185,9 @@ export async function verifyLevel1Signature(
       };
     }
 
-    // Validate signature size for EC keys (only when raw format)
+    // Validate raw signature size for EC keys (V2 only — V1 is DER)
     const keyAlgOid = data.level1KeyAlg;
-    if (keyAlgOid) {
+    if (keyAlgOid && data.headerVersion >= 2) {
       const keyAlg = getKeyAlgorithm(keyAlgOid);
       if (keyAlg?.type === 'EC') {
         const sizeError = validateEcSignatureSize(data.level1Signature);
@@ -192,6 +203,7 @@ export async function verifyLevel1Signature(
       data.level1Signature,
       resolved,
       sigAlg.hash,
+      data.headerVersion,
     );
 
     return { valid, algorithm: `${sigAlg.type} with ${sigAlg.hash}` };
@@ -217,10 +229,8 @@ export async function verifySignatures(
   bytes: Uint8Array,
   options?: VerifyOptions,
 ): Promise<SignatureVerificationResult> {
-  // Level 2 is always verifiable (key is in the barcode)
   const level2 = await verifyLevel2Signature(bytes);
 
-  // Level 1 requires external key
   let level1: SingleVerificationResult;
 
   if (options?.level1PublicKey) {
