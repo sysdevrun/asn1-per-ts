@@ -238,6 +238,46 @@ export interface TicketLink {
 }
 
 // ---------------------------------------------------------------------------
+// Signature verification types
+// ---------------------------------------------------------------------------
+
+/** Result of a single level's signature verification. */
+export interface SingleVerificationResult {
+  /** Whether the signature is valid. */
+  valid: boolean;
+  /** Error description if verification failed. */
+  error?: string;
+  /** Algorithm used for verification, e.g. "ECDSA with SHA-256". */
+  algorithm?: string;
+}
+
+/** Result of verifying both Level 1 and Level 2 signatures. */
+export interface SignatureVerificationResult {
+  level1: SingleVerificationResult;
+  level2: SingleVerificationResult;
+}
+
+/** Options for signature verification. */
+export interface VerifyOptions {
+  /** Provider for Level 1 public keys (looked up by issuer + keyId). */
+  level1KeyProvider?: Level1KeyProvider;
+  /**
+   * Explicit Level 1 public key bytes or KeyObject.
+   * Alternative to level1KeyProvider for simple cases.
+   */
+  level1PublicKey?: Uint8Array | import('node:crypto').KeyObject;
+}
+
+/** Provider interface for fetching Level 1 public keys externally. */
+export interface Level1KeyProvider {
+  getPublicKey(
+    securityProvider: { num?: number; ia5?: string },
+    keyId: number,
+    keyAlg?: string,
+  ): Promise<Uint8Array | import('node:crypto').KeyObject>;
+}
+
+// ---------------------------------------------------------------------------
 // Encoding input types
 // ---------------------------------------------------------------------------
 
