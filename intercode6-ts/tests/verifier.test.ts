@@ -5,7 +5,7 @@ import {
 } from '../src/verifier';
 import { extractSignedData } from '../src/signed-data';
 import { importEcPublicKey } from '../src/signature-utils';
-import { SAMPLE_TICKET_HEX } from '../src/fixtures';
+import { SAMPLE_TICKET_HEX, GRAND_EST_U1_FCB3_HEX } from '../src/fixtures';
 import {
   generateKeyPairSync,
   sign,
@@ -112,6 +112,26 @@ describe('verifySignatures', () => {
 
     expect(result.level1.valid).toBe(false);
     expect(result.level1.error).toContain('Network error');
+  });
+});
+
+describe('real ticket verification', () => {
+  it('verifies Grand Est U1 FCB3 Level 2 signature', async () => {
+    const bytes = hexToBytes(GRAND_EST_U1_FCB3_HEX);
+    const result = await verifyLevel2Signature(bytes);
+
+    expect(result.valid).toBe(true);
+    expect(result.algorithm).toBe('ECDSA with SHA-256');
+  });
+
+  it('reports Grand Est Level 2 signed data fields', () => {
+    const bytes = hexToBytes(GRAND_EST_U1_FCB3_HEX);
+    const data = extractSignedData(bytes);
+
+    expect(data.level2Signature).toBeDefined();
+    expect(data.level2PublicKey).toBeDefined();
+    expect(data.level2SigningAlg).toBe('1.2.840.10045.4.3.2'); // ECDSA SHA-256
+    expect(data.level2KeyAlg).toBe('1.2.840.10045.3.1.7');     // EC P-256
   });
 });
 

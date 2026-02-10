@@ -34,21 +34,17 @@ function resolvePublicKey(
   }
 
   const rawBytes = rawKey as Uint8Array;
-  if (!keyAlgOid) {
-    throw new Error('Key algorithm OID is required when providing raw key bytes');
+
+  // If the bytes start with 0x30 (SEQUENCE tag), it's already a DER-encoded
+  // SPKI structure — import directly. This handles both EC and DSA keys
+  // stored as full SPKI in the barcode (e.g. level2PublicKey).
+  if (rawBytes.length > 0 && rawBytes[0] === 0x30) {
+    return importSpkiPublicKey(rawBytes);
   }
 
-  const keyAlg = getKeyAlgorithm(keyAlgOid);
-  if (!keyAlg) {
-    throw new Error(`Unknown key algorithm OID: ${keyAlgOid}`);
-  }
-
-  if (keyAlg.type === 'EC') {
-    return importEcPublicKey(rawBytes);
-  }
-
-  // DSA: raw bytes are DER-encoded SPKI
-  return importSpkiPublicKey(rawBytes);
+  // Otherwise it's a raw EC point (uncompressed 0x04 or compressed 0x02/0x03)
+  // — wrap in SPKI for P-256.
+  return importEcPublicKey(rawBytes);
 }
 
 // ---------------------------------------------------------------------------
