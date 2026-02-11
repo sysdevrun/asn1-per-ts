@@ -2,7 +2,7 @@
  * Embedded JSON schemas for UIC barcode decoding.
  * These are imported at build time and bundled into the compiled module.
  */
-import type { SchemaNode } from 'per-unaligned-ts';
+import type { SchemaNode } from 'asn1-per-ts';
 
 import headerV1 from '../../schemas/uic-barcode/uicBarcodeHeader_v1.schema.json';
 import headerV2 from '../../schemas/uic-barcode/uicBarcodeHeader_v2.schema.json';

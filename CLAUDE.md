@@ -2,9 +2,9 @@
 
 ## Project overview
 
-per-unaligned-ts is a TypeScript npm module for encoding and decoding ASN.1 PER (Packed Encoding Rules) unaligned data. It provides bit-level buffer management, constraint-based primitive codecs, and a schema-driven API for encoding/decoding JSON objects.
+asn1-per-ts is a TypeScript npm module for encoding and decoding ASN.1 PER (Packed Encoding Rules) unaligned data. It provides bit-level buffer management, constraint-based primitive codecs, and a schema-driven API for encoding/decoding JSON objects.
 
-**The `intercode6-ts/` module is the main encoding/decoding library built on top of per-unaligned-ts.** Most encoding and decoding work should use intercode6-ts — understanding the low-level primitives in `src/` is usually not required.
+**The `intercode6-ts/` module is the main encoding/decoding library built on top of asn1-per-ts.** Most encoding and decoding work should use intercode6-ts — understanding the low-level primitives in `src/` is usually not required.
 
 The `examples/` directory contains guides that should be sufficient for most usage.
 
@@ -43,7 +43,7 @@ The `examples/` directory contains guides that should be sufficient for most usa
 - Constraints are passed via constructor options objects
 - Schema definitions use the `SchemaNode` discriminated union type
 - Tests use Jest with `ts-jest` preset, test files live in `tests/` (not colocated)
-- The website imports the library source directly via a Vite alias (`per-unaligned-ts` -> `../src`)
+- The website imports the library source directly via a Vite alias (`asn1-per-ts` -> `../src`)
 
 ## CI/CD
 

@@ -10,8 +10,8 @@ import {
   SchemaBuilder,
   BitBuffer,
   type SchemaNode,
-} from 'per-unaligned-ts';
-import type { Codec } from 'per-unaligned-ts';
+} from 'asn1-per-ts';
+import type { Codec } from 'asn1-per-ts';
 import { HEADER_SCHEMAS, RAIL_TICKET_SCHEMAS, INTERCODE_SCHEMAS } from './schemas';
 import type {
   UicBarcodeTicket,

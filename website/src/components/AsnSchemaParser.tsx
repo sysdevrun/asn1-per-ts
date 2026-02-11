@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { parseAsn1Module, convertModuleToSchemaNodes } from 'per-unaligned-ts';
-import type { SchemaNode } from 'per-unaligned-ts';
+import { parseAsn1Module, convertModuleToSchemaNodes } from 'asn1-per-ts';
+import type { SchemaNode } from 'asn1-per-ts';
 
 interface AsnSchemaParserProps {
   onSchemaSelect: (schemaText: string) => void;

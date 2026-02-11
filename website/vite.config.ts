@@ -7,7 +7,7 @@ export default defineConfig({
   base: './',
   resolve: {
     alias: {
-      'per-unaligned-ts': path.resolve(__dirname, '../src'),
+      'asn1-per-ts': path.resolve(__dirname, '../src'),
       'intercode6-ts': path.resolve(__dirname, '../intercode6-ts/src'),
     },
   },

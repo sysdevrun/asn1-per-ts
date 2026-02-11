@@ -1,4 +1,4 @@
-# per-unaligned-ts
+# asn1-per-ts
 
 TypeScript library for encoding and decoding data using ASN.1 PER (Packed Encoding Rules) unaligned variant (ITU-T X.691).
 
@@ -14,7 +14,7 @@ TypeScript library for encoding and decoding data using ASN.1 PER (Packed Encodi
 ## Install
 
 ```bash
-npm install per-unaligned-ts
+npm install asn1-per-ts
 ```
 
 ## Usage
@@ -22,7 +22,7 @@ npm install per-unaligned-ts
 ### Low-level codec API
 
 ```typescript
-import { BitBuffer, IntegerCodec, BooleanCodec, SequenceCodec } from 'per-unaligned-ts';
+import { BitBuffer, IntegerCodec, BooleanCodec, SequenceCodec } from 'asn1-per-ts';
 
 // Constrained integer (0..255) uses 8 bits
 const intCodec = new IntegerCodec({ min: 0, max: 255 });
@@ -36,7 +36,7 @@ console.log(intCodec.decode(buf)); // 42
 ### Schema-driven API
 
 ```typescript
-import { SchemaCodec } from 'per-unaligned-ts';
+import { SchemaCodec } from 'asn1-per-ts';
 
 const codec = new SchemaCodec({
   type: 'SEQUENCE',
@@ -59,8 +59,8 @@ console.log(decoded);
 `decodeWithMetadata` returns a `DecodedNode` tree with full encoding metadata (bit offsets, bit lengths, raw bytes, codec references) for every field. Use `stripMetadata` to convert back to a plain object identical to `decode()`.
 
 ```typescript
-import { SchemaCodec, stripMetadata } from 'per-unaligned-ts';
-import type { DecodedNode } from 'per-unaligned-ts';
+import { SchemaCodec, stripMetadata } from 'asn1-per-ts';
+import type { DecodedNode } from 'asn1-per-ts';
 
 const codec = new SchemaCodec({
   type: 'SEQUENCE',

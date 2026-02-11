@@ -7,7 +7,7 @@ import Intercode6Decoder from './components/Intercode6Decoder';
 import Intercode6Generator from './components/Intercode6Generator';
 import AztecCodeReader from './components/AztecCodeReader';
 import Footer from './components/Footer';
-import type { SchemaNode } from 'per-unaligned-ts';
+import type { SchemaNode } from 'asn1-per-ts';
 
 type Tab = 'per' | 'ic6-decode' | 'ic6-generate' | 'aztec-reader';
 

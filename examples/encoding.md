@@ -14,7 +14,7 @@ There are two levels of encoding API:
 ### Encode to hex string
 
 ```typescript
-import { SchemaCodec } from 'per-unaligned-ts';
+import { SchemaCodec } from 'asn1-per-ts';
 
 const codec = new SchemaCodec({
   type: 'SEQUENCE',
@@ -117,7 +117,7 @@ const hex = codec.encodeToHex([10, 20, 30]);
 ### Roundtrip: encode then decode
 
 ```typescript
-import { SchemaCodec } from 'per-unaligned-ts';
+import { SchemaCodec } from 'asn1-per-ts';
 
 const codec = new SchemaCodec({
   type: 'SEQUENCE',
@@ -147,7 +147,7 @@ import {
   parseAsn1Module,
   convertModuleToSchemaNodes,
   SchemaCodec,
-} from 'per-unaligned-ts';
+} from 'asn1-per-ts';
 
 const asn1Text = `
 Example DEFINITIONS AUTOMATIC TAGS ::= BEGIN
@@ -238,7 +238,7 @@ const hex2 = codec.encodeToHex(999);
 ### BitBuffer basics
 
 ```typescript
-import { BitBuffer } from 'per-unaligned-ts';
+import { BitBuffer } from 'asn1-per-ts';
 
 // Allocate a writable buffer
 const buffer = BitBuffer.alloc();
@@ -264,7 +264,7 @@ const binary = buffer.toBinaryString(); // '0' and '1' characters
 ### Encode a constrained INTEGER
 
 ```typescript
-import { BitBuffer, IntegerCodec } from 'per-unaligned-ts';
+import { BitBuffer, IntegerCodec } from 'asn1-per-ts';
 
 const codec = new IntegerCodec({ min: 0, max: 255 });
 
@@ -278,7 +278,7 @@ console.log(buffer.toHex()); // '2a'
 ### Encode a BOOLEAN
 
 ```typescript
-import { BitBuffer, BooleanCodec } from 'per-unaligned-ts';
+import { BitBuffer, BooleanCodec } from 'asn1-per-ts';
 
 const codec = new BooleanCodec();
 
@@ -292,7 +292,7 @@ console.log(buffer.toBinaryString()); // '1'
 ### Encode an ENUMERATED
 
 ```typescript
-import { BitBuffer, EnumeratedCodec } from 'per-unaligned-ts';
+import { BitBuffer, EnumeratedCodec } from 'asn1-per-ts';
 
 const codec = new EnumeratedCodec({
   values: ['red', 'green', 'blue'],
@@ -306,7 +306,7 @@ codec.encode(buffer, 'green');
 ### Encode BIT STRING and OCTET STRING
 
 ```typescript
-import { BitBuffer, BitStringCodec, OctetStringCodec } from 'per-unaligned-ts';
+import { BitBuffer, BitStringCodec, OctetStringCodec } from 'asn1-per-ts';
 
 // Fixed-size BIT STRING (no length prefix)
 const bitCodec = new BitStringCodec({ fixedSize: 16 });
@@ -322,7 +322,7 @@ octetCodec.encode(buf2, new Uint8Array([0x01, 0x02, 0x03]));
 ### Encode strings
 
 ```typescript
-import { BitBuffer, UTF8StringCodec } from 'per-unaligned-ts';
+import { BitBuffer, UTF8StringCodec } from 'asn1-per-ts';
 
 const codec = new UTF8StringCodec({
   type: 'IA5String',
@@ -337,7 +337,7 @@ codec.encode(buffer, 'hello');
 ### Encode OBJECT IDENTIFIER
 
 ```typescript
-import { BitBuffer, ObjectIdentifierCodec } from 'per-unaligned-ts';
+import { BitBuffer, ObjectIdentifierCodec } from 'asn1-per-ts';
 
 const codec = new ObjectIdentifierCodec();
 const buffer = BitBuffer.alloc();
@@ -349,7 +349,7 @@ OID values are encoded as dot-notation strings using BER contents octets (X.690 
 ### Encode a SEQUENCE manually
 
 ```typescript
-import { BitBuffer, SequenceCodec, IntegerCodec, BooleanCodec } from 'per-unaligned-ts';
+import { BitBuffer, SequenceCodec, IntegerCodec, BooleanCodec } from 'asn1-per-ts';
 
 const codec = new SequenceCodec({
   fields: [
@@ -366,7 +366,7 @@ console.log(buffer.toHex()); // '2a80'
 ### Encode a CHOICE manually
 
 ```typescript
-import { BitBuffer, ChoiceCodec, BooleanCodec, IntegerCodec } from 'per-unaligned-ts';
+import { BitBuffer, ChoiceCodec, BooleanCodec, IntegerCodec } from 'asn1-per-ts';
 
 const codec = new ChoiceCodec({
   alternatives: [
@@ -383,7 +383,7 @@ codec.encode(buffer, { count: 42 });
 ### Encode SEQUENCE OF
 
 ```typescript
-import { BitBuffer, SequenceOfCodec, IntegerCodec } from 'per-unaligned-ts';
+import { BitBuffer, SequenceOfCodec, IntegerCodec } from 'asn1-per-ts';
 
 const codec = new SequenceOfCodec({
   itemCodec: new IntegerCodec({ min: 0, max: 255 }),
@@ -400,7 +400,7 @@ codec.encode(buffer, [10, 20, 30]);
 You can encode multiple values sequentially into the same buffer:
 
 ```typescript
-import { BitBuffer, IntegerCodec, BooleanCodec } from 'per-unaligned-ts';
+import { BitBuffer, IntegerCodec, BooleanCodec } from 'asn1-per-ts';
 
 const intCodec = new IntegerCodec({ min: 0, max: 255 });
 const boolCodec = new BooleanCodec();

@@ -16,7 +16,7 @@ The resulting `SchemaNode` objects can be used directly with `SchemaCodec` (`src
 ### Basic: Parse and convert an ASN.1 module
 
 ```typescript
-import { parseAsn1Module, convertModuleToSchemaNodes } from 'per-unaligned-ts';
+import { parseAsn1Module, convertModuleToSchemaNodes } from 'asn1-per-ts';
 
 const asn1Text = `
 MyModule DEFINITIONS AUTOMATIC TAGS ::= BEGIN
@@ -62,7 +62,7 @@ import {
   parseAsn1Module,
   convertModuleToSchemaNodes,
   SchemaCodec,
-} from 'per-unaligned-ts';
+} from 'asn1-per-ts';
 
 const asn1Text = `
 Example DEFINITIONS AUTOMATIC TAGS ::= BEGIN
@@ -92,7 +92,7 @@ import {
   convertModuleToSchemaNodes,
   SchemaBuilder,
   BitBuffer,
-} from 'per-unaligned-ts';
+} from 'asn1-per-ts';
 
 const asn1Text = `
 TreeModule DEFINITIONS AUTOMATIC TAGS ::= BEGIN
@@ -263,7 +263,7 @@ Produces `SchemaNode`:
 You can construct `SchemaNode` objects directly in TypeScript without using the ASN.1 parser. This is useful for simple schemas or when you want full control:
 
 ```typescript
-import { SchemaCodec, type SchemaNode } from 'per-unaligned-ts';
+import { SchemaCodec, type SchemaNode } from 'asn1-per-ts';
 
 const schema: SchemaNode = {
   type: 'SEQUENCE',
@@ -288,7 +288,7 @@ The `schemas/uic-barcode/` directory contains pre-generated `SchemaNode` JSON fi
 
 ```typescript
 import headerSchemas from './schemas/uic-barcode/uicBarcodeHeader_v1.schema.json';
-import { SchemaCodec, type SchemaNode } from 'per-unaligned-ts';
+import { SchemaCodec, type SchemaNode } from 'asn1-per-ts';
 
 const codec = new SchemaCodec(headerSchemas.UicBarcodeHeader as unknown as SchemaNode);
 ```
