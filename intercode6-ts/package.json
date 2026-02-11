@@ -23,7 +23,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "per-unaligned-ts": "file:../."
+    "asn1-per-ts": "file:../."
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

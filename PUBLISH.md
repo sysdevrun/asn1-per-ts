@@ -1,4 +1,4 @@
-# Publishing per-unaligned-ts to npm
+# Publishing asn1-per-ts to npm
 
 This package is published to npm as an ESM-only module with provenance via GitHub Actions OIDC.
 
@@ -10,7 +10,7 @@ If you don't have one, sign up at https://www.npmjs.com/signup.
 
 ### 2. Link the npm package to your GitHub repository
 
-Go to https://www.npmjs.com/settings/YOUR_USERNAME/packages and verify that the `per-unaligned-ts` package name is available (or already owned by you).
+Go to https://www.npmjs.com/settings/YOUR_USERNAME/packages and verify that the `asn1-per-ts` package name is available (or already owned by you).
 
 ### 3. Generate an npm access token
 
@@ -19,7 +19,7 @@ Go to https://www.npmjs.com/settings/YOUR_USERNAME/packages and verify that the 
 3. Configure:
    - **Token name**: `github-actions-publish`
    - **Expiration**: choose a duration (or no expiration)
-   - **Packages and scopes**: select **Only select packages and scopes**, then pick `per-unaligned-ts` (or "All packages" if the package doesn't exist yet)
+   - **Packages and scopes**: select **Only select packages and scopes**, then pick `asn1-per-ts` (or "All packages" if the package doesn't exist yet)
    - **Permissions**: **Read and write**
 4. Click **Generate Token** and copy the token value
 
@@ -35,7 +35,7 @@ Go to https://www.npmjs.com/settings/YOUR_USERNAME/packages and verify that the 
 
 npm provenance is automatically enabled by the `--provenance` flag in the publish workflow. For this to work:
 
-1. Go to your npm package settings at https://www.npmjs.com/package/per-unaligned-ts/access (available after first publish)
+1. Go to your npm package settings at https://www.npmjs.com/package/asn1-per-ts/access (available after first publish)
 2. Under **Publishing access**, ensure **Require two-factor authentication or an automation token** is selected
 3. No additional OIDC configuration is needed on the npm side — npm trusts GitHub Actions OIDC tokens natively
 
@@ -68,7 +68,7 @@ git push origin main --follow-tags
 
 ### 3. Create a GitHub release
 
-1. Go to https://github.com/sysdevrun/per-unaligned-ts/releases/new
+1. Go to https://github.com/sysdevrun/asn1-per-ts/releases/new
 2. Select the tag you just pushed (e.g., `v1.0.1`)
 3. Set the release title (e.g., `v1.0.1`)
 4. Add release notes (or click **Generate release notes** for auto-generated notes)
@@ -83,7 +83,7 @@ The `publish.yml` GitHub Action will automatically:
 ### 4. Verify
 
 - Check the **Actions** tab for the workflow run status
-- Verify the package on https://www.npmjs.com/package/per-unaligned-ts
+- Verify the package on https://www.npmjs.com/package/asn1-per-ts
 - The package page will show a **Provenance** badge linking the build back to the exact GitHub commit and workflow
 
 ## What gets published

@@ -17,7 +17,7 @@ analyze how to create a schema that can be used to encode or decode a document.
 
 fetch https://github.com/UnionInternationalCheminsdeFer/UIC-barcode/blob/master/misc/uicBarcodeHeader_v2.0.1.asn
 
-add to the npm library a parser of asn schema notation. the parser must use a npm module for parsing. it outputs a schema that can be used by the per-unaligned-ts module. it is unit tested.
+add to the npm library a parser of asn schema notation. the parser must use a npm module for parsing. it outputs a schema that can be used by the asn1-per-ts module. it is unit tested.
 
 the parser is run against the UIC schema to verify it works.
 if some constraints are not implemented yet, they are described in a TODO.md file.
@@ -158,4 +158,9 @@ In the website, add an Aztec code reader library that allows to browse an image 
 
 ## Publish npm package with GitHub OIDC
 
-Prepare everything needed to publish the per-unaligned-ts package as npm module on npm.org with GitHub OIDC connection. Everything must be as easy and automated as possible. Write a PUBLISH.md doc to explain how to proceed. The package will be ESM only, working for both node and browser. Keep website publication on GitHub pages but don't package it in the npm module. Actions should be done via GitHub Actions.
+Prepare everything needed to publish the asn1-per-ts package as npm module on npm.org with GitHub OIDC connection. Everything must be as easy and automated as possible. Write a PUBLISH.md doc to explain how to proceed. The package will be ESM only, working for both node and browser. Keep website publication on GitHub pages but don't package it in the npm module. Actions should be done via GitHub Actions.
+
+## Rename project from per-unaligned-ts to asn1-per-ts
+
+project has been renamed from per-unaligned-ts to asn1-per-ts.
+rename project name everywhere

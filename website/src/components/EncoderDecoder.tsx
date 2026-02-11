@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { SchemaCodec } from 'per-unaligned-ts';
-import type { SchemaNode } from 'per-unaligned-ts';
+import { SchemaCodec } from 'asn1-per-ts';
+import type { SchemaNode } from 'asn1-per-ts';
 
 interface EncoderDecoderProps {
   schema: SchemaNode;

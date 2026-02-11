@@ -15,7 +15,7 @@ There are two levels of decoding API:
 ### Decode from hex string
 
 ```typescript
-import { SchemaCodec } from 'per-unaligned-ts';
+import { SchemaCodec } from 'asn1-per-ts';
 
 const codec = new SchemaCodec({
   type: 'SEQUENCE',
@@ -101,8 +101,8 @@ Every codec has a `decodeWithMetadata` method that returns a `DecodedNode` tree.
 ### High-level metadata decoding
 
 ```typescript
-import { SchemaCodec, stripMetadata } from 'per-unaligned-ts';
-import type { DecodedNode } from 'per-unaligned-ts';
+import { SchemaCodec, stripMetadata } from 'asn1-per-ts';
+import type { DecodedNode } from 'asn1-per-ts';
 
 const codec = new SchemaCodec({
   type: 'SEQUENCE',
@@ -194,7 +194,7 @@ console.log(fields.version.value);          // 1
 `stripMetadata` walks the `DecodedNode` tree and reconstructs a plain object identical to `decode()`:
 
 ```typescript
-import { stripMetadata } from 'per-unaligned-ts';
+import { stripMetadata } from 'asn1-per-ts';
 
 const node = codec.decodeFromHexWithMetadata(hex);
 const plain = stripMetadata(node);
@@ -208,7 +208,7 @@ const plain = stripMetadata(node);
 Every codec class also supports `decodeWithMetadata`:
 
 ```typescript
-import { BitBuffer, IntegerCodec } from 'per-unaligned-ts';
+import { BitBuffer, IntegerCodec } from 'asn1-per-ts';
 
 const codec = new IntegerCodec({ min: 0, max: 255 });
 const buffer = BitBuffer.from(new Uint8Array([0x2a]));
@@ -236,7 +236,7 @@ const raw = buffer.extractBits(4, 8);
 For complex real-world protocols, load pre-generated schema JSON files from the `schemas/` directory:
 
 ```typescript
-import { SchemaCodec, SchemaBuilder, type SchemaNode } from 'per-unaligned-ts';
+import { SchemaCodec, SchemaBuilder, type SchemaNode } from 'asn1-per-ts';
 import headerSchemas from './schemas/uic-barcode/uicBarcodeHeader_v1.schema.json';
 
 // Simple schema (no $ref nodes) — use SchemaCodec directly
@@ -250,7 +250,7 @@ const decoded = codec.decodeFromHex('...');
 For schemas with recursive types (`$ref` nodes), use `SchemaBuilder.buildAll()`:
 
 ```typescript
-import { SchemaBuilder, BitBuffer, type SchemaNode } from 'per-unaligned-ts';
+import { SchemaBuilder, BitBuffer, type SchemaNode } from 'asn1-per-ts';
 import railTicketSchemas from './schemas/uic-barcode/uicRailTicketData_v2.schema.json';
 
 const codecs = SchemaBuilder.buildAll(
@@ -272,7 +272,7 @@ import {
   parseAsn1Module,
   convertModuleToSchemaNodes,
   SchemaCodec,
-} from 'per-unaligned-ts';
+} from 'asn1-per-ts';
 
 const asn1Text = `
 Example DEFINITIONS AUTOMATIC TAGS ::= BEGIN
@@ -297,7 +297,7 @@ For fine-grained control, use `BitBuffer` (`src/BitBuffer.ts`) with individual c
 ### BitBuffer basics
 
 ```typescript
-import { BitBuffer } from 'per-unaligned-ts';
+import { BitBuffer } from 'asn1-per-ts';
 
 // Create a read buffer from bytes
 const buffer = BitBuffer.from(new Uint8Array([0x2a, 0x80]));
@@ -333,7 +333,7 @@ const buffer = BitBuffer.fromBinaryString('00101010');
 ### Decode a constrained INTEGER
 
 ```typescript
-import { BitBuffer, IntegerCodec } from 'per-unaligned-ts';
+import { BitBuffer, IntegerCodec } from 'asn1-per-ts';
 
 const codec = new IntegerCodec({ min: 0, max: 255 });
 const buffer = BitBuffer.from(new Uint8Array([0x2a]));
@@ -352,7 +352,7 @@ Options for `IntegerCodec` (see `src/codecs/IntegerCodec.ts`):
 ### Decode a BOOLEAN
 
 ```typescript
-import { BitBuffer, BooleanCodec } from 'per-unaligned-ts';
+import { BitBuffer, BooleanCodec } from 'asn1-per-ts';
 
 const codec = new BooleanCodec();
 const buffer = BitBuffer.from(new Uint8Array([0x80])); // MSB = 1
@@ -363,7 +363,7 @@ const value = codec.decode(buffer);
 ### Decode an ENUMERATED
 
 ```typescript
-import { BitBuffer, EnumeratedCodec } from 'per-unaligned-ts';
+import { BitBuffer, EnumeratedCodec } from 'asn1-per-ts';
 
 const codec = new EnumeratedCodec({
   values: ['red', 'green', 'blue'],
@@ -384,7 +384,7 @@ Options for `EnumeratedCodec` (see `src/codecs/EnumeratedCodec.ts`):
 ### Decode BIT STRING and OCTET STRING
 
 ```typescript
-import { BitBuffer, BitStringCodec, OctetStringCodec } from 'per-unaligned-ts';
+import { BitBuffer, BitStringCodec, OctetStringCodec } from 'asn1-per-ts';
 
 // Fixed-size BIT STRING (no length prefix in encoding)
 const bitCodec = new BitStringCodec({ fixedSize: 8 });
@@ -420,7 +420,7 @@ Options for `OctetStringCodec` (see `src/codecs/OctetStringCodec.ts`):
 ### Decode strings
 
 ```typescript
-import { BitBuffer, UTF8StringCodec } from 'per-unaligned-ts';
+import { BitBuffer, UTF8StringCodec } from 'asn1-per-ts';
 
 const codec = new UTF8StringCodec({
   type: 'IA5String',
@@ -447,7 +447,7 @@ Options for `UTF8StringCodec` (see `src/codecs/UTF8StringCodec.ts`):
 ### Decode SEQUENCE manually
 
 ```typescript
-import { BitBuffer, SequenceCodec, IntegerCodec, BooleanCodec } from 'per-unaligned-ts';
+import { BitBuffer, SequenceCodec, IntegerCodec, BooleanCodec } from 'asn1-per-ts';
 
 const codec = new SequenceCodec({
   fields: [
@@ -471,7 +471,7 @@ Options for `SequenceCodec` (see `src/codecs/SequenceCodec.ts`):
 ### Decode CHOICE manually
 
 ```typescript
-import { BitBuffer, ChoiceCodec, BooleanCodec, IntegerCodec } from 'per-unaligned-ts';
+import { BitBuffer, ChoiceCodec, BooleanCodec, IntegerCodec } from 'asn1-per-ts';
 
 const codec = new ChoiceCodec({
   alternatives: [
@@ -495,7 +495,7 @@ Options for `ChoiceCodec` (see `src/codecs/ChoiceCodec.ts`):
 ### Decode SEQUENCE OF
 
 ```typescript
-import { BitBuffer, SequenceOfCodec, IntegerCodec } from 'per-unaligned-ts';
+import { BitBuffer, SequenceOfCodec, IntegerCodec } from 'asn1-per-ts';
 
 const codec = new SequenceOfCodec({
   itemCodec: new IntegerCodec({ min: 0, max: 255 }),
@@ -511,7 +511,7 @@ const items = codec.decode(buffer);
 ### Decode OBJECT IDENTIFIER
 
 ```typescript
-import { BitBuffer, ObjectIdentifierCodec } from 'per-unaligned-ts';
+import { BitBuffer, ObjectIdentifierCodec } from 'asn1-per-ts';
 
 const codec = new ObjectIdentifierCodec();
 const buffer = BitBuffer.from(someBytes);
@@ -530,7 +530,7 @@ The `cli/decode-uic-barcode.ts` tool demonstrates a complete decoding pipeline:
 5. Dispatch on `extensionId` patterns to decode Intercode 6 extensions
 
 ```typescript
-import { SchemaCodec, SchemaBuilder, BitBuffer, type SchemaNode } from 'per-unaligned-ts';
+import { SchemaCodec, SchemaBuilder, BitBuffer, type SchemaNode } from 'asn1-per-ts';
 import headerSchemas from './schemas/uic-barcode/uicBarcodeHeader_v1.schema.json';
 import railTicketSchemas from './schemas/uic-barcode/uicRailTicketData_v2.schema.json';
 

@@ -4,7 +4,7 @@ export default function ProjectDescription() {
       <h2 className="text-xl font-semibold mb-4">About</h2>
       <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4 text-sm leading-relaxed text-gray-700">
         <p>
-          <strong>per-unaligned-ts</strong> is a TypeScript library for encoding
+          <strong>asn1-per-ts</strong> is a TypeScript library for encoding
           and decoding data using ASN.1 PER (Packed Encoding Rules) unaligned
           variant, as defined in ITU-T X.691.
         </p>

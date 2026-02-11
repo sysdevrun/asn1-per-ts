@@ -54,7 +54,7 @@ Instead of the risky decode-then-re-encode path, we decode the header
 **once** with metadata and read the signed bytes directly from the tree:
 
 ```typescript
-import { SchemaCodec, type DecodedNode } from 'per-unaligned-ts';
+import { SchemaCodec, type DecodedNode } from 'asn1-per-ts';
 
 const headerCodec = getHeaderCodec(headerVersion);
 const root: DecodedNode = headerCodec.decodeWithMetadata(bytes);

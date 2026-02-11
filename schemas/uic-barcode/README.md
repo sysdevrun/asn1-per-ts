@@ -18,7 +18,7 @@ These schemas were generated from the official ASN.1 sources using `parseAsn1Mod
 ## Usage
 
 ```typescript
-import { SchemaBuilder, SchemaCodec } from 'per-unaligned-ts';
+import { SchemaBuilder, SchemaCodec } from 'asn1-per-ts';
 import headerSchemas from './uicBarcodeHeader_v2.schema.json';
 import ticketSchemas from './uicRailTicketData_v3.schema.json';
 
