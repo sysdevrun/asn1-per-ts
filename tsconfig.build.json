@@ -1,4 +1,8 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ES2020",
+    "moduleResolution": "bundler"
+  },
   "exclude": ["node_modules", "dist", "tests", "website", "intercode6-ts", "**/*.test.ts"]
 }

@@ -155,3 +155,7 @@ Read last commit. Update plan in intercode6-ts to implement signature with the f
 ## Add Aztec code reader to website
 
 In the website, add an Aztec code reader library that allows to browse an image from the phone and decode it and convert it to hex encoded data, so hex encoded can be used as UIC ticket encoded data.
+
+## Publish npm package with GitHub OIDC
+
+Prepare everything needed to publish the per-unaligned-ts package as npm module on npm.org with GitHub OIDC connection. Everything must be as easy and automated as possible. Write a PUBLISH.md doc to explain how to proceed. The package will be ESM only, working for both node and browser. Keep website publication on GitHub pages but don't package it in the npm module. Actions should be done via GitHub Actions.
