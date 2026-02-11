@@ -164,3 +164,10 @@ Prepare everything needed to publish the asn1-per-ts package as npm module on np
 
 project has been renamed from per-unaligned-ts to asn1-per-ts.
 rename project name everywhere
+
+## Implement signature verification
+
+Implement signature verification for intercode6-ts:
+- add a method to tell if signature linked to dynamic version is present
+- add a method that verify the signature linked to dynamic version
+- add a method to verify signature linked to public key that is provided externally. this method accepts the public key
