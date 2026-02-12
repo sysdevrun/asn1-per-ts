@@ -35,3 +35,7 @@ export type {
   VerifyOptions,
   Level1KeyProvider,
 } from './types';
+
+export type { SigningAlgorithm, KeyAlgorithm } from './oids';
+export type { SignedDataBytes } from './signed-data';
+export type { UicPublicKeyEntry } from './key-provider';

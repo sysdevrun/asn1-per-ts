@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   decodeTicket,
-  verifyLevel2Signature,
+  verifySignatures,
+  createUicKeyProvider,
   SAMPLE_TICKET_HEX,
   SNCF_TER_TICKET_HEX,
   SOLEA_TICKET_HEX,
   CTS_TICKET_HEX,
   GRAND_EST_U1_FCB3_HEX,
 } from 'intercode6-ts';
-import type { UicBarcodeTicket, SignatureLevelResult } from 'intercode6-ts';
+import type { UicBarcodeTicket, SignatureLevelResult, SignatureVerificationResult } from 'intercode6-ts';
 
 function toHex(bytes: Uint8Array): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -91,11 +92,11 @@ function SignatureStatus({ label, result }: { label: string; result?: SignatureL
 
 function TicketDisplay({
   ticket,
-  signatureResult,
+  verificationResult,
   verifying,
 }: {
   ticket: UicBarcodeTicket;
-  signatureResult?: SignatureLevelResult | null;
+  verificationResult?: SignatureVerificationResult | null;
   verifying: boolean;
 }) {
   return (
@@ -122,15 +123,12 @@ function TicketDisplay({
           </div>
           {verifying ? (
             <div className="text-xs text-gray-500">Verifying signatures...</div>
-          ) : (
+          ) : verificationResult ? (
             <>
-              <SignatureStatus label="Level 2 (embedded key)" result={signatureResult} />
-              <div className="flex gap-2 items-start mt-1">
-                <span className="text-gray-500 min-w-[180px]">Level 1 (external key):</span>
-                <span className="text-xs text-gray-400">Requires external public key</span>
-              </div>
+              <SignatureStatus label="Level 2 (embedded key)" result={verificationResult.level2} />
+              <SignatureStatus label="Level 1 (UIC registry)" result={verificationResult.level1} />
             </>
-          )}
+          ) : null}
         </div>
       </Section>
 
@@ -272,13 +270,14 @@ export default function Intercode6Decoder({ initialHex, onConsumeInitialHex }: I
   const [ticket, setTicket] = useState<UicBarcodeTicket | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [consumedHex, setConsumedHex] = useState<string | undefined>(undefined);
-  const [signatureResult, setSignatureResult] = useState<SignatureLevelResult | null>(null);
+  const [verificationResult, setVerificationResult] = useState<SignatureVerificationResult | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const keyProviderRef = useRef(createUicKeyProvider());
 
   // Run signature verification when ticket changes
   useEffect(() => {
     if (!ticket) {
-      setSignatureResult(null);
+      setVerificationResult(null);
       return;
     }
 
@@ -292,14 +291,17 @@ export default function Intercode6Decoder({ initialHex, onConsumeInitialHex }: I
     }
 
     const bytes = hexToBytes(hex);
-    verifyLevel2Signature(bytes).then((result) => {
+    verifySignatures(bytes, { level1KeyProvider: keyProviderRef.current }).then((result) => {
       if (!cancelled) {
-        setSignatureResult(result);
+        setVerificationResult(result);
         setVerifying(false);
       }
     }).catch(() => {
       if (!cancelled) {
-        setSignatureResult({ valid: false, error: 'Verification failed unexpectedly' });
+        setVerificationResult({
+          level1: { valid: false, error: 'Verification failed unexpectedly' },
+          level2: { valid: false, error: 'Verification failed unexpectedly' },
+        });
         setVerifying(false);
       }
     });
@@ -326,7 +328,7 @@ export default function Intercode6Decoder({ initialHex, onConsumeInitialHex }: I
     const input = hex ?? hexInput;
     setError(null);
     setTicket(null);
-    setSignatureResult(null);
+    setVerificationResult(null);
     try {
       if (!input.trim()) {
         setError('Enter hex data to decode');
@@ -409,7 +411,7 @@ export default function Intercode6Decoder({ initialHex, onConsumeInitialHex }: I
         {ticket && (
           <TicketDisplay
             ticket={ticket}
-            signatureResult={signatureResult}
+            verificationResult={verificationResult}
             verifying={verifying}
           />
         )}

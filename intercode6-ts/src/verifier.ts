@@ -17,6 +17,25 @@ import type {
 } from './types';
 
 /**
+ * Check whether a Level 2 signature is present in a UIC barcode.
+ *
+ * Checks for the presence of the Level 2 signature, public key,
+ * and signing algorithm OID - the three fields required for
+ * self-contained Level 2 verification.
+ */
+export function hasLevel2Signature(bytes: Uint8Array): boolean {
+  try {
+    const { header } = extractSignedDataBytes(bytes);
+    const level2Signature = header.level2Signature as Uint8Array | undefined;
+    const l2 = header.level2SignedData as Record<string, unknown>;
+    const l1 = l2.level1Data as Record<string, unknown>;
+    return !!(level2Signature && l1.level2PublicKey && l1.level2SigningAlg);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Verify both Level 1 and Level 2 signatures on a UIC barcode.
  *
  * Level 2 verification uses the embedded level2PublicKey from level1Data.
