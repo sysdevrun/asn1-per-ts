@@ -115,65 +115,93 @@ const KEY_ALGORITHMS: Record<string, { curve?: string; type: string }> = {
 
 ---
 
-## 3. Signature Format Conversion
+## 3. Signature Format
 
-### ECDSA Signature Format
+### Real-World Signature Analysis
 
-UIC barcodes store ECDSA signatures as **raw concatenated (r || s)** values
-(e.g., 64 bytes for P-256: 32-byte r + 32-byte s).
-
-Some crypto APIs (e.g. Web Crypto, Node.js `crypto.verify()`) expect
-**DER-encoded** signatures. A conversion may be needed depending on the
-library:
+Analysis of real-world tickets (SNCF TER, Soléa, CTS) shows that UIC
+barcodes store signatures in **DER-encoded** format, not raw `(r || s)`
+concatenation. The signatures are standard ASN.1 DER:
 
 ```
-Raw:  r (32 bytes) || s (32 bytes)  → 64 bytes total
-DER:  SEQUENCE { INTEGER r, INTEGER s }  → ~70-72 bytes
-```
-
-### Implementation
-
-```typescript
-// Convert raw (r || s) to DER-encoded ECDSA signature
-function rawToDer(raw: Uint8Array): Uint8Array {
-  const half = raw.length / 2;
-  const r = raw.slice(0, half);
-  const s = raw.slice(half);
-
-  function encodeInteger(value: Uint8Array): Uint8Array {
-    // Strip leading zeros, add 0x00 padding if high bit set
-    let start = 0;
-    while (start < value.length - 1 && value[start] === 0) start++;
-    const trimmed = value.slice(start);
-    const needsPad = trimmed[0] & 0x80;
-    const len = trimmed.length + (needsPad ? 1 : 0);
-    const buf = new Uint8Array(2 + len);
-    buf[0] = 0x02; // INTEGER tag
-    buf[1] = len;
-    if (needsPad) buf[2] = 0x00;
-    buf.set(trimmed, 2 + (needsPad ? 1 : 0));
-    return buf;
-  }
-
-  const rDer = encodeInteger(r);
-  const sDer = encodeInteger(s);
-  const seq = new Uint8Array(2 + rDer.length + sDer.length);
-  seq[0] = 0x30; // SEQUENCE tag
-  seq[1] = rDer.length + sDer.length;
-  seq.set(rDer, 2);
-  seq.set(sDer, 2 + rDer.length);
-  return seq;
+SEQUENCE {
+  INTEGER r,
+  INTEGER s
 }
 ```
 
-> **Note**: When using `@noble/curves`, DER conversion is typically not
-> needed — `@noble/curves` works with raw `(r || s)` signatures directly.
-> This conversion is only required when using the Web Crypto API fallback.
+The DER size varies because INTEGER values are padded with a leading `0x00`
+byte when the high bit is set (to distinguish from negative numbers).
 
-### DSA Signature Format
+### ECDSA P-256 Signatures (real examples)
 
-DSA signatures also use (r || s) concatenation in UIC barcodes and need
-the same DER conversion.
+**70 bytes** (no padding needed):
+```
+3044
+  0220 24df3d92d8f23d0b01572732e3752ce179f65a8160128341b86f9772f6677a14
+  0220 149d2950f3925fea703f4048eb3ada17649cdd2228ab5319cbd9c0d59d5cf603
+```
+
+**71 bytes** (one integer padded):
+```
+3045
+  0221 00c02fa08b4a288401a053dd250c1f748ae51d16b9aac26eacc09056695f0abe68
+  0220 50c1f1b13a5e8e126441f84159e5b3188d505e73354492b8de369441daa7285b
+```
+
+**72 bytes** (both integers padded):
+```
+3046
+  0221 008974af39d91452785b211f49ec2e36302b2b73ec3b99f5cdba5f1bf5c9e7cb72
+  0221 00f468337ab677c729a43b601c8df31f0c9c9923be5711ace720943c1f99b2a34b
+```
+
+### DSA Signatures (real example from SNCF TER level 1)
+
+**46 bytes** — DSA with SHA-1 (160-bit r and s):
+```
+302c
+  0214 7a71a4d9abdf2204ae40d6dd2dff4adb30df5e44
+  0214 66856f3933964f825f1c825da94a5e3868ffe649
+```
+
+### DER-to-Raw Conversion
+
+Since `@noble/curves` expects raw `(r || s)` signatures, a DER-to-raw
+conversion is needed (the reverse of what was originally planned):
+
+```typescript
+/** Parse a DER-encoded ECDSA/DSA signature into raw (r || s). */
+function derToRaw(der: Uint8Array, componentLength: number): Uint8Array {
+  // der[0] = 0x30 (SEQUENCE), der[1] = length
+  // der[2] = 0x02 (INTEGER), der[3] = r length
+  const rLen = der[3];
+  const rStart = 4;
+  const sTag = rStart + rLen; // der[sTag] = 0x02
+  const sLen = der[sTag + 1];
+  const sStart = sTag + 2;
+
+  const raw = new Uint8Array(componentLength * 2);
+
+  // Copy r (strip leading 0x00 pad, right-align into componentLength)
+  const rPad = rLen > componentLength ? rLen - componentLength : 0;
+  const rDst = componentLength - (rLen - rPad);
+  raw.set(der.slice(rStart + rPad, rStart + rLen), rDst);
+
+  // Copy s (strip leading 0x00 pad, right-align into componentLength)
+  const sPad = sLen > componentLength ? sLen - componentLength : 0;
+  const sDst = componentLength + componentLength - (sLen - sPad);
+  raw.set(der.slice(sStart + sPad, sStart + sLen), sDst);
+
+  return raw;
+}
+```
+
+The `componentLength` is determined by the curve: 32 for P-256, 48 for
+P-384, 66 for P-521, 20 for DSA-160.
+
+> **Note**: The Web Crypto API (`crypto.subtle.verify`) expects DER-encoded
+> signatures natively, so no conversion is needed when using that fallback.
 
 ---
 
@@ -410,7 +438,7 @@ const result3 = await verifySignatures(bytes, {
 - Export lookup functions
 
 ### Step 2: Signature format utilities (`src/signature-utils.ts`)
-- `rawToDer(raw)` — convert (r || s) to DER for ECDSA/DSA
+- `derToRaw(der, componentLength)` — convert DER-encoded signature to raw (r || s) for `@noble/curves`
 - `importEcPublicKey(raw, curve)` — parse raw EC point for use with `@noble/curves`
 - `decompressEcPoint(compressed, curve)` — decompress EC point if needed
   (`@noble/curves` handles compressed points natively, so this may not
@@ -438,11 +466,31 @@ const result3 = await verifySignatures(bytes, {
 - Export verification functions from `index.ts`
 
 ### Step 6: Tests
+
+Run unit tests against the three real-world ticket fixtures to verify
+signatures end-to-end:
+
+```bash
+npm test
+```
+
+**Ticket fixtures** (source hex data):
+- `intercode6-ts/src/fixtures.ts` → `SNCF_TER_TICKET_HEX`, `SOLEA_TICKET_HEX`, `CTS_TICKET_HEX`
+
+**Signature fixtures** (extracted DER signatures + security metadata):
+- `intercode6-ts/src/signature-fixtures.ts` → `SNCF_TER_SIGNATURES`, `SOLEA_SIGNATURES`, `CTS_SIGNATURES`
+
+**Test plan:**
 - Unit tests for OID mapping
-- Unit tests for rawToDer conversion with known vectors
+- Unit tests for `derToRaw` conversion with known vectors from signature fixtures
 - Tests for signed data extraction via `decodeWithMetadata` (verify `rawBytes`
   offsets and lengths match expected sub-structure boundaries)
-- Integration tests with real barcode samples (requires known-good keys)
+- Integration tests: decode each of the three ticket fixtures, extract
+  signed data bytes, and verify both level 1 and level 2 signatures
+  against the corresponding signature fixtures
+- Verify level 2 signatures are self-contained (embedded public key)
+- Verify level 1 signatures using keys fetched from the UIC registry
+  (matching `securityProviderNum` + `keyId` from the signature fixtures)
 - Test error cases (missing signatures, unknown algorithms, invalid keys)
 
 ---
@@ -496,8 +544,9 @@ available in both modern browsers and Node.js 16+.
 4. **EC point compression**: `level2PublicKey` can be compressed (33 bytes)
    or uncompressed (65 bytes). The crypto library must handle both.
 
-5. **Signature size validation**: ECDSA P-256 signatures should be 64 bytes
-   (raw). Reject obviously wrong sizes early.
+5. **Signature size validation**: ECDSA P-256 DER signatures are 70-72 bytes
+   (variable due to INTEGER padding). DSA-160 signatures are ~46 bytes.
+   Reject obviously wrong sizes early.
 
 6. **DSA support**: Less common but specified. `@noble/curves` does not
    include DSA — use the Web Crypto API (`crypto.subtle`) as a fallback,
@@ -518,23 +567,24 @@ available in both modern browsers and Node.js 16+.
 
 ```
 intercode6-ts/src/
-├── types.ts           # + Level1KeyProvider, SignatureVerificationResult
-├── index.ts           # + export verification functions
-├── decoder.ts         # (unchanged)
-├── encoder.ts         # (unchanged)
-├── schemas.ts         # (unchanged)
-├── fixtures.ts        # (unchanged)
-├── oids.ts            # NEW: OID-to-algorithm mapping
-├── signature-utils.ts # NEW: DER conversion, key import
-├── signed-data.ts     # NEW: extract signed bytes via decodeWithMetadata
-└── verifier.ts        # NEW: verification entry points
+├── types.ts              # + Level1KeyProvider, SignatureVerificationResult
+├── index.ts              # + export verification + signature fixtures
+├── decoder.ts            # (unchanged)
+├── encoder.ts            # (unchanged)
+├── schemas.ts            # (unchanged)
+├── fixtures.ts           # ticket hex data (SNCF_TER, SOLEA, CTS, etc.)
+├── signature-fixtures.ts # extracted DER signatures + security metadata
+├── oids.ts               # NEW: OID-to-algorithm mapping
+├── signature-utils.ts    # NEW: DER-to-raw conversion, key import
+├── signed-data.ts        # NEW: extract signed bytes via decodeWithMetadata
+└── verifier.ts           # NEW: verification entry points
 
 intercode6-ts/tests/
-├── decoder.test.ts    # (unchanged)
-├── oids.test.ts       # NEW
-├── signature-utils.test.ts # NEW
-├── signed-data.test.ts     # NEW
-└── verifier.test.ts        # NEW
+├── decoder.test.ts            # (unchanged)
+├── oids.test.ts               # NEW
+├── signature-utils.test.ts    # NEW
+├── signed-data.test.ts        # NEW
+└── verifier.test.ts           # NEW: test against SNCF_TER, SOLEA, CTS fixtures
 ```
 
 ---

@@ -197,3 +197,23 @@ keys can be stored in two ways:
 update text to give examples and tell conversion may be needed depending of the crypto library
 
 add the requirement the intercode6-ts module must be usable on both browser and node
+
+## Add signature fixtures and correct signature format
+
+find Soléa CTS and TER SNCF ticket in fixtures. indicate the path in the guide. tell to run unit tests against those tickets and verify the signatures. extract the related signatures into a fixtures committed to the project
+
+examples of signatures
+Level 1 signature:
+[46 bytes] 302c02147a71a4d9abdf2204ae40d6dd2dff4adb30df5e44021466856f3933964f825f1c825da94a5e3868ffe649
+
+Level 2 signature:
+[70 bytes] 3044022024df3d92d8f23d0b01572732e3752ce179f65a8160128341b86f9772f6677a140220149d2950f3925fea703f4048eb3ada17649cdd2228ab5319cbd9c0d59d5cf603
+
+Level 1 signature:
+[71 bytes] 3045022100c02fa08b4a288401a053dd250c1f748ae51d16b9aac26eacc09056695f0abe68022050c1f1b13a5e8e126441f84159e5b3188d505e73354492b8de369441daa7285b
+
+Level 2 signature:
+[71 bytes] 304502202a79f008376051f020eae108d0e9950314cac19c4c580249be4b530ec2250ccb022100a00d805f051efcd130b17b76bf10969b626ed026423f6024d34446eae9168fa3
+
+Level 1 signature:
+[72 bytes] 30460221008974af39d91452785b211f49ec2e36302b2b73ec3b99f5cdba5f1bf5c9e7cb72022100f468337ab677c729a43b601c8df31f0c9c9923be5711ace720943c1f99b2a34b
