@@ -217,3 +217,7 @@ Level 2 signature:
 
 Level 1 signature:
 [72 bytes] 30460221008974af39d91452785b211f49ec2e36302b2b73ec3b99f5cdba5f1bf5c9e7cb72022100f468337ab677c729a43b601c8df31f0c9c9923be5711ace720943c1f99b2a34b
+
+## Evaluate Zod for ASN.1 schema to typed TypeScript objects
+
+Evaluate how Zod could be used to output TypeScript typed objects depending on the ASN JSON schema. Test options on basic types and SEQUENCE. Write a plan.
