@@ -321,3 +321,37 @@ export interface TransportDocumentInput {
   ticketType: string;
   ticket: Record<string, unknown>;
 }
+
+// ---------------------------------------------------------------------------
+// Signature verification types
+// ---------------------------------------------------------------------------
+
+/** Result of a signature verification attempt for a single level. */
+export interface SignatureLevelResult {
+  valid: boolean;
+  error?: string;
+  algorithm?: string;
+}
+
+/** Result of signature verification for both levels. */
+export interface SignatureVerificationResult {
+  level1: SignatureLevelResult;
+  level2: SignatureLevelResult;
+}
+
+/** Options for signature verification. */
+export interface VerifyOptions {
+  /** Provider for Level 1 public keys (looked up by issuer + keyId). */
+  level1KeyProvider?: Level1KeyProvider;
+  /** Explicit Level 1 public key bytes (alternative to level1KeyProvider). */
+  level1PublicKey?: Uint8Array;
+}
+
+/** Provider interface for looking up Level 1 public keys. */
+export interface Level1KeyProvider {
+  getPublicKey(
+    securityProvider: { num?: number; ia5?: string },
+    keyId: number,
+    keyAlg?: string,
+  ): Promise<Uint8Array>;
+}

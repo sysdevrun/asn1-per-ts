@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   decodeTicket,
+  verifyLevel2Signature,
+  verifyLevel1Signature,
+  findKeyInXml,
+  extractSignedData,
   SAMPLE_TICKET_HEX,
   SNCF_TER_TICKET_HEX,
   SOLEA_TICKET_HEX,
@@ -57,9 +61,147 @@ function BytesField({ label, bytes }: { label: string; bytes?: Uint8Array }) {
   );
 }
 
-function TicketDisplay({ ticket }: { ticket: UicBarcodeTicket }) {
+// ---------------------------------------------------------------------------
+// Signature verification
+// ---------------------------------------------------------------------------
+
+interface VerificationState {
+  level2: { status: 'pending' | 'valid' | 'invalid' | 'missing'; message: string; algorithm?: string } | null;
+  level1: { status: 'pending' | 'valid' | 'invalid' | 'missing'; message: string; algorithm?: string } | null;
+}
+
+let cachedKeysXml: string | null = null;
+
+async function fetchKeysXml(): Promise<string | null> {
+  if (cachedKeysXml) return cachedKeysXml;
+  try {
+    const res = await fetch('./uic-publickeys.xml');
+    if (!res.ok) return null;
+    cachedKeysXml = await res.text();
+    return cachedKeysXml;
+  } catch {
+    return null;
+  }
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.replace(/[\s\n\r]/g, '');
+  return new Uint8Array(clean.match(/.{1,2}/g)!.map(b => parseInt(b, 16)));
+}
+
+function SignatureVerification({ hex }: { hex: string }) {
+  const [state, setState] = useState<VerificationState>({ level2: null, level1: null });
+
+  const verify = useCallback(async () => {
+    setState({ level2: { status: 'pending', message: 'Verifying...' }, level1: { status: 'pending', message: 'Verifying...' } });
+
+    const bytes = hexToBytes(hex);
+
+    // Level 2
+    try {
+      const l2 = await verifyLevel2Signature(bytes);
+      if (l2.valid) {
+        setState(s => ({ ...s, level2: { status: 'valid', message: 'Valid', algorithm: l2.algorithm } }));
+      } else if (l2.error?.includes('Missing')) {
+        setState(s => ({ ...s, level2: { status: 'missing', message: l2.error ?? 'Not present' } }));
+      } else {
+        setState(s => ({ ...s, level2: { status: 'invalid', message: l2.error ?? 'Invalid' } }));
+      }
+    } catch (e: unknown) {
+      setState(s => ({ ...s, level2: { status: 'invalid', message: e instanceof Error ? e.message : 'Error' } }));
+    }
+
+    // Level 1
+    try {
+      const extracted = extractSignedData(bytes);
+      const { security } = extracted;
+      const issuerCode = security.securityProviderNum;
+      const keyId = security.keyId;
+
+      if (issuerCode == null || keyId == null) {
+        setState(s => ({ ...s, level1: { status: 'missing', message: 'Missing issuer code or key ID' } }));
+        return;
+      }
+
+      if (!security.level1Signature) {
+        setState(s => ({ ...s, level1: { status: 'missing', message: 'No level 1 signature present' } }));
+        return;
+      }
+
+      const xml = await fetchKeysXml();
+      if (!xml) {
+        setState(s => ({ ...s, level1: { status: 'missing', message: 'Could not load public keys (uic-publickeys.xml)' } }));
+        return;
+      }
+
+      const pubKey = findKeyInXml(xml, issuerCode, keyId);
+      if (!pubKey) {
+        setState(s => ({ ...s, level1: { status: 'missing', message: `No key found for issuer ${issuerCode}, key ID ${keyId}` } }));
+        return;
+      }
+
+      const l1 = await verifyLevel1Signature(bytes, pubKey);
+      if (l1.valid) {
+        setState(s => ({ ...s, level1: { status: 'valid', message: 'Valid', algorithm: l1.algorithm } }));
+      } else {
+        setState(s => ({ ...s, level1: { status: 'invalid', message: l1.error ?? 'Invalid' } }));
+      }
+    } catch (e: unknown) {
+      setState(s => ({ ...s, level1: { status: 'invalid', message: e instanceof Error ? e.message : 'Error' } }));
+    }
+  }, [hex]);
+
+  useEffect(() => { verify(); }, [verify]);
+
+  return (
+    <Section title="Signature Verification">
+      <SignatureRow label="Level 2" result={state.level2} />
+      <SignatureRow label="Level 1" result={state.level1} />
+    </Section>
+  );
+}
+
+function SignatureRow({ label, result }: { label: string; result: VerificationState['level2'] }) {
+  if (!result) return null;
+
+  const icon = {
+    pending: <span className="text-gray-400 animate-pulse">...</span>,
+    valid: <span className="text-green-600 font-bold">&#10003;</span>,
+    invalid: <span className="text-red-600 font-bold">&#10007;</span>,
+    missing: <span className="text-amber-500 font-bold">&#9888;</span>,
+  }[result.status];
+
+  const bgColor = {
+    pending: 'bg-gray-50',
+    valid: 'bg-green-50 border-green-200',
+    invalid: 'bg-red-50 border-red-200',
+    missing: 'bg-amber-50 border-amber-200',
+  }[result.status];
+
+  const textColor = {
+    pending: 'text-gray-600',
+    valid: 'text-green-800',
+    invalid: 'text-red-800',
+    missing: 'text-amber-800',
+  }[result.status];
+
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 rounded border ${bgColor}`}>
+      <span className="w-5 text-center">{icon}</span>
+      <span className="font-medium text-sm min-w-[60px]">{label}:</span>
+      <span className={`text-sm ${textColor}`}>{result.message}</span>
+      {result.algorithm && (
+        <span className="text-xs text-gray-500 ml-auto font-mono">{result.algorithm}</span>
+      )}
+    </div>
+  );
+}
+
+function TicketDisplay({ ticket, hex }: { ticket: UicBarcodeTicket; hex: string }) {
   return (
     <div className="space-y-4">
+      <SignatureVerification hex={hex} />
+
       <Section title="Header">
         <Field label="Format" value={ticket.format} />
         <Field label="Header version" value={ticket.headerVersion} />
@@ -314,7 +456,7 @@ export default function Intercode6Decoder({ initialHex, onConsumeInitialHex }: I
           </div>
         )}
 
-        {ticket && <TicketDisplay ticket={ticket} />}
+        {ticket && <TicketDisplay ticket={ticket} hex={hexInput} />}
       </div>
     </section>
   );
