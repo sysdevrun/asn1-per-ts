@@ -23,7 +23,7 @@ import { fileURLToPath } from 'url';
 import { SchemaCodec } from '../src/schema/SchemaCodec';
 import { SchemaBuilder, type SchemaNode } from '../src/schema/SchemaBuilder';
 import { BitBuffer } from '../src/BitBuffer';
-import { Codec } from '../src/codecs/Codec';
+import type { Codec } from '../src/codecs/Codec';
 
 // ---------------------------------------------------------------------------
 // Schema paths and version maps
@@ -61,7 +61,6 @@ let intercodeDynamicCodec: SchemaCodec | undefined;
 function getHeaderCodec(version: number): SchemaCodec {
   let codec = headerCodecCache.get(version);
   if (codec) return codec;
-
   const schemaPath = HEADER_SCHEMAS[version];
   if (!schemaPath) {
     throw new Error(
@@ -181,12 +180,11 @@ function main(): void {
   const hex = loadHexFixture(fixturePath);
   const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map(b => parseInt(b, 16)));
 
-  // Step 1: Peek the format field with a minimal decode.
-  // UicBarcodeHeader is a non-extensible SEQUENCE with one optional field
-  // (level2Signature), producing a 1-bit bitmap before format (IA5String).
-  // We read past the bitmap, then decode just the IA5String.
+  // Step 1: Peek the format using low-level BitBuffer.
+  // UicBarcodeHeader SEQUENCE has 1 optional (level2Signature) → 1-bit bitmap,
+  // then format (IA5String).
   const peekBuf = BitBuffer.from(bytes);
-  peekBuf.readBit(); // skip optional bitmap (level2Signature present/absent)
+  peekBuf.readBit(); // skip optional bitmap
   const format = SchemaBuilder.build({ type: 'IA5String' } as SchemaNode)
     .decode(peekBuf) as string;
 
@@ -197,14 +195,21 @@ function main(): void {
   }
   const headerVersion = parseInt(headerVersionMatch[1], 10);
 
-  const headerCodec = getHeaderCodec(headerVersion);
-  const header = headerCodec.decodeFromHex(hex) as any;
-
   console.log(`--- UicBarcodeHeader (${format}) ---`);
-  console.log(`format: ${header.format}`);
+  console.log(`format: ${format}`);
+
+  // Step 2: Decode the full header with the version-specific schema.
+  let header: any;
+  try {
+    header = getHeaderCodec(headerVersion).decodeFromHex(hex) as any;
+  } catch (err) {
+    console.error(`ERROR decoding UicBarcodeHeader: ${(err as Error).message}`);
+    console.log(`\n=== Decode complete (partial — format only) ===`);
+    return;
+  }
+
   console.log(`level2Signature: [${header.level2Signature?.length ?? 0} bytes] ${header.level2Signature ? toHex(header.level2Signature) : 'n/a'}`);
 
-  // Step 2: Level 2 signed data
   const l2 = header.level2SignedData;
   console.log(`\n--- Level2SignedData ---`);
   console.log(`level1Signature: [${l2.level1Signature?.length ?? 0} bytes] ${l2.level1Signature ? toHex(l2.level1Signature) : 'n/a'}`);

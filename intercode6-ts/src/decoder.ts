@@ -119,9 +119,9 @@ export function decodeTicket(hex: string): UicBarcodeTicket {
  * @returns A fully typed {@link UicBarcodeTicket} object.
  */
 export function decodeTicketFromBytes(bytes: Uint8Array): UicBarcodeTicket {
-  // Step 1: Peek the header format
+  // Step 1: Peek the header format using low-level BitBuffer
   const peekBuf = BitBuffer.from(bytes);
-  peekBuf.readBit(); // skip optional bitmap
+  peekBuf.readBit(); // skip optional bitmap (level2Signature present/absent)
   const format = SchemaBuilder.build({ type: 'IA5String' } as SchemaNode).decode(peekBuf) as string;
 
   const headerVersionMatch = format.match(/^U(\d+)$/);
@@ -130,9 +130,8 @@ export function decodeTicketFromBytes(bytes: Uint8Array): UicBarcodeTicket {
   }
   const headerVersion = parseInt(headerVersionMatch[1], 10);
 
-  // Step 2: Decode the full header
-  const headerCodec = getHeaderCodec(headerVersion);
-  const header = headerCodec.decode(bytes) as any;
+  // Step 2: Decode the full header with version-specific schema
+  const header = getHeaderCodec(headerVersion).decode(bytes) as any;
 
   const l2 = header.level2SignedData;
   const l1 = l2.level1Data;
