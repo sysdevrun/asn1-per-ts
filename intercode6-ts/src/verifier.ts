@@ -28,21 +28,25 @@ interface CurveOps {
   componentLength: number;
 }
 
+// UIC barcode signatures may have non-normalized (high-S) values, so we
+// disable the lowS check that @noble/curves enforces by default.
+const VERIFY_OPTS = { lowS: false } as const;
+
 function getCurveOps(curve: string): CurveOps {
   switch (curve) {
     case 'P-256':
       return {
-        verify: (sig, msg, pk) => p256.verify(sig, msg, pk),
+        verify: (sig, msg, pk) => p256.verify(sig, msg, pk, VERIFY_OPTS),
         componentLength: 32,
       };
     case 'P-384':
       return {
-        verify: (sig, msg, pk) => p384.verify(sig, msg, pk),
+        verify: (sig, msg, pk) => p384.verify(sig, msg, pk, VERIFY_OPTS),
         componentLength: 48,
       };
     case 'P-521':
       return {
-        verify: (sig, msg, pk) => p521.verify(sig, msg, pk),
+        verify: (sig, msg, pk) => p521.verify(sig, msg, pk, VERIFY_OPTS),
         componentLength: 66,
       };
     default:
