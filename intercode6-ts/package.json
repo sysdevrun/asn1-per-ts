@@ -23,7 +23,10 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "asn1-per-ts": "file:../."
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1",
+    "asn1-per-ts": "file:../.",
+    "peggy": "^5.0.6"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",

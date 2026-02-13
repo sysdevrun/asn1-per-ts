@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "paths": {
+      "asn1-per-ts": ["../src/index.ts"]
+    }
+  },
+  "include": ["./*.ts", "../intercode6-ts/src/**/*.ts", "../src/**/*.ts"]
+}
