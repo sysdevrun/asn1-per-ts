@@ -1,61 +1,49 @@
-# Parser Fuzzing
+# Parser & PER Codec Fuzzing
 
-Fuzzing infrastructure for the ASN.1 PER parser (`parseAsn1Module`) and its AST-to-SchemaNode converter (`convertModuleToSchemaNodes`).
+Fuzzing infrastructure for the ASN.1 PER unaligned encoder/decoder, the ASN.1 schema text parser (`parseAsn1Module`), and the AST-to-SchemaNode converter (`convertModuleToSchemaNodes`).
 
-## Evaluation: Why Fuzz the Parser?
+## Evaluation: Why Fuzz?
 
-The ASN.1 parser accepts arbitrary string input and processes it through two stages:
+### PER Unaligned Codec
 
-1. **PEG grammar parsing** (`parseAsn1Module`): Transforms raw ASN.1 text into an AST via Peggy
-2. **AST conversion** (`convertModuleToSchemaNodes`): Transforms the AST into `SchemaNode` definitions with type resolution, cycle detection, and constraint application
-
-Both stages are vulnerable to edge cases that unit tests are unlikely to cover:
+The PER codec operates at the bit level, encoding/decoding values according to constraint-driven rules. Edge cases include:
 
 | Risk | Description | Fuzzing approach |
 |------|-------------|------------------|
-| **Crash on malformed input** | Unexpected characters, truncated modules, missing delimiters | Mutation fuzzing |
-| **Hang / infinite loop** | Deeply nested types, pathological constraint combinations, recursive references | Generation fuzzing with depth control |
-| **Uncaught exceptions** | Grammar edge cases that Peggy doesn't reject cleanly | Random generation + mutation |
-| **Memory exhaustion** | Extremely large enumerations, deeply nested SEQUENCE OF chains | Generation with size amplification |
-| **Incorrect AST** | Valid-looking input that produces a subtly wrong AST | Property-based generation + validation |
-| **Constraint mishandling** | Unusual constraint combinations (e.g., negative ranges, MIN..MAX, extensible fixed-size) | Targeted constraint generation |
-| **Type resolution bugs** | Forward references, mutual recursion, shadowed type names | Multi-assignment generation |
+| **Decode crash on malformed bytes** | Arbitrary byte sequences fed to decoders | Random bytes decode fuzzing |
+| **Round-trip mismatch** | encode(x) decoded back produces different value | Round-trip with random valid values |
+| **Off-by-one bit errors** | Misaligned reads across byte boundaries, especially for non-byte-aligned types | Random constraint ranges + values |
+| **Constraint edge cases** | Single-value ranges (0 bits), extensible out-of-range values, zero-size collections | Boundary value generation |
+| **Composite codec interaction** | SEQUENCE preamble bits, CHOICE index encoding, extension open-type framing | Random optional/default field presence |
+| **Buffer underrun** | Truncated data, partial fields, missing length determinants | Short random byte arrays |
+| **Length determinant bugs** | Unconstrained/semi-constrained lengths with unusual byte counts | Random bytes through length-encoded types |
 
-## Fuzzing Strategies Implemented
+### ASN.1 Text Parser
 
-### 1. Grammar-Aware Generation (`generators/asn1-generator.ts`)
+The parser accepts arbitrary string input through PEG grammar parsing and AST-to-SchemaNode conversion. See below for parser-specific risks.
 
-Generates random but structurally plausible ASN.1 module text by following the grammar structure. Controls:
-- Nesting depth (prevents infinite recursion during generation)
-- Number of type assignments
-- Field/alternative counts for SEQUENCE/CHOICE
-- Constraint variation (value, size, extensible, fixed)
-- Type reference generation (including forward references and self-references)
+## Test Files
 
-**Strengths**: High likelihood of exercising deep parser paths. Finds bugs in constraint handling, nested structures, and type resolution.
+### PER Codec Tests
 
-**Weaknesses**: Limited ability to find bugs triggered by truly invalid syntax.
+- **`fuzz-per-codec.test.ts`** — Round-trip fuzzing (65 tests, 200+ iterations each)
+  - Every codec type: Boolean, Integer, Enumerated, BitString, OctetString, UTF8String/IA5String/VisibleString, OID, Null
+  - Composite codecs: Sequence (optional/default fields), Choice, SequenceOf
+  - SchemaCodec high-level API
+  - Random constraint ranges, boundary values, extensible in/out of range
+  - Sequential multi-codec encoding in shared buffer
 
-### 2. Mutation Fuzzing (`generators/mutator.ts`)
+- **`fuzz-per-decode.test.ts`** — Arbitrary bytes decode fuzzing (39 tests, 300 iterations each)
+  - Every codec type with random bytes: must decode or throw clean Error
+  - Multiple constraint configurations per codec type
+  - `decodeWithMetadata()` validation
+  - BitBuffer edge cases (empty buffer, exact-size reads, random readBits/readOctets)
+  - Encoder constraint violation verification
 
-Takes valid ASN.1 seed inputs and applies random mutations:
-- **Byte-level**: Bit flips, byte insertion/deletion/replacement
-- **Token-level**: Keyword replacement, identifier mangling, number boundary substitution
-- **Structural**: Brace/paren removal, comma insertion/deletion, extension marker injection
+### Parser Tests
 
-**Strengths**: Explores the boundary between valid and invalid input. Effective at finding parser error-handling gaps.
-
-**Weaknesses**: Most mutations produce trivially invalid input that gets rejected immediately.
-
-### 3. Property-Based Checks
-
-For inputs that parse successfully, we verify structural properties:
-- Every `SchemaNode` has a valid `type` discriminant
-- SEQUENCE fields all have `name` and `schema` properties
-- CHOICE alternatives all have `name` and `schema` properties
-- Constraint values are consistent (min <= max when both defined, fixedSize set when min === max)
-- No unresolved `$ref` nodes pointing to types not in the module
-- `extensionValues`/`extensionFields`/`extensionAlternatives` are arrays when present
+- **`fuzz-parser.test.ts`** — Grammar-aware generation and mutation of ASN.1 text
+- **`fuzz-converter.test.ts`** — Full pipeline (parse + convert) with SchemaNode validation
 
 ## Directory Structure
 
@@ -67,31 +55,43 @@ fuzzing/
   generators/
     asn1-generator.ts              # Grammar-aware random ASN.1 generator
     mutator.ts                     # Mutation strategies for strings
+  fuzz-per-codec.test.ts           # PER encode/decode round-trip fuzzing
+  fuzz-per-decode.test.ts          # PER decoding of arbitrary/malformed bytes
   fuzz-parser.test.ts              # Fuzz tests for parseAsn1Module
   fuzz-converter.test.ts           # Fuzz tests for full pipeline
-  run.ts                           # Standalone continuous fuzzer script
+  run.ts                           # Standalone continuous parser fuzzer script
 ```
 
 ## Running
 
 ```bash
-# Run fuzz tests via Jest (default: 500 iterations each)
+# Run all fuzz tests
 npx jest --config fuzzing/jest.config.cjs
 
-# Run a specific fuzz test file
+# Run only PER codec fuzz tests
+npx jest --config fuzzing/jest.config.cjs fuzz-per
+
+# Run only parser fuzz tests
 npx jest --config fuzzing/jest.config.cjs fuzz-parser
 
-# Standalone continuous fuzzer (runs until stopped or crash found)
+# Control iteration count via environment variable
+FUZZ_ITERATIONS=1000 npx jest --config fuzzing/jest.config.cjs
+
+# Standalone continuous parser fuzzer (runs until stopped or crash found)
 npx ts-node fuzzing/run.ts
 
 # With iteration limit
 npx ts-node fuzzing/run.ts --iterations 10000
 ```
 
+## Known Findings
+
+- **PEG parser backtracking**: Pathological input strings (e.g., long ambiguous token sequences) can cause the Peggy PEG parser to hang due to exponential backtracking. The fuzz harness caps input length at 2KB to mitigate this. This is a real denial-of-service risk if the parser accepts untrusted input.
+
 ## Extending
 
-To add new seed inputs, add entries to `seeds.ts`. Good seeds are valid ASN.1 modules that exercise specific grammar features (constraints, extensions, recursion, etc.).
+To add new seed inputs, add entries to `seeds.ts`. Good seeds are valid ASN.1 modules that exercise specific grammar features.
 
 To add new mutation strategies, add functions to `generators/mutator.ts` and register them in the `MUTATORS` array.
 
-To add new property checks, add validation functions to the test files' `validateSchemaNode` helpers.
+To add new PER codec fuzz scenarios, add test cases to `fuzz-per-codec.test.ts` (round-trip) or `fuzz-per-decode.test.ts` (random bytes).
