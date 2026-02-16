@@ -3,13 +3,9 @@ import Header from './components/Header';
 import ProjectDescription from './components/ProjectDescription';
 import SchemaBuilder from './components/SchemaBuilder';
 import EncoderDecoder from './components/EncoderDecoder';
-import Intercode6Decoder from './components/Intercode6Decoder';
-import Intercode6Generator from './components/Intercode6Generator';
-import AztecCodeReader from './components/AztecCodeReader';
+import AsnSchemaParser from './components/AsnSchemaParser';
 import Footer from './components/Footer';
 import type { SchemaNode } from 'asn1-per-ts';
-
-type Tab = 'per' | 'ic6-decode' | 'ic6-generate' | 'aztec-reader';
 
 const DEFAULT_SCHEMA: SchemaNode = {
   type: 'SEQUENCE',
@@ -23,24 +19,10 @@ const DEFAULT_SCHEMA: SchemaNode = {
   ],
 };
 
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'per', label: 'PER Encode / Decode' },
-  { key: 'ic6-decode', label: 'Intercode 6 Decoder' },
-  { key: 'ic6-generate', label: 'Intercode 6 Generator' },
-  { key: 'aztec-reader', label: 'Aztec Code Reader' },
-];
-
 export default function App() {
-  const [tab, setTab] = useState<Tab>('per');
   const [schema, setSchema] = useState<SchemaNode>(DEFAULT_SCHEMA);
   const [schemaText, setSchemaText] = useState(JSON.stringify(DEFAULT_SCHEMA, null, 2));
   const [schemaError, setSchemaError] = useState<string | null>(null);
-  const [ic6HexInput, setIc6HexInput] = useState<string | undefined>(undefined);
-
-  const handleAztecHexDecoded = (hex: string) => {
-    setIc6HexInput(hex);
-    setTab('ic6-decode');
-  };
 
   const handleSchemaChange = (text: string) => {
     setSchemaText(text);
@@ -59,42 +41,20 @@ export default function App() {
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-8 space-y-8">
         <ProjectDescription />
 
-        {/* Tab navigation */}
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-1 -mb-px">
-            {TABS.map(({ key, label }) => (
-              <button
-                key={key}
-                onClick={() => setTab(key)}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
-                  tab === key
-                    ? 'bg-white border border-gray-200 border-b-white text-indigo-600 -mb-px'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Tab content */}
-        {tab === 'per' && (
-          <div className="space-y-10">
-            <SchemaBuilder
-              schemaText={schemaText}
-              schemaError={schemaError}
-              onChange={handleSchemaChange}
-            />
-            <EncoderDecoder schema={schema} schemaError={schemaError} />
+        <section>
+          <h2 className="text-xl font-semibold mb-4">ASN.1 Schema Parser</h2>
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <AsnSchemaParser onSchemaSelect={handleSchemaChange} />
           </div>
-        )}
+        </section>
 
-        {tab === 'ic6-decode' && <Intercode6Decoder initialHex={ic6HexInput} onConsumeInitialHex={() => setIc6HexInput(undefined)} />}
+        <SchemaBuilder
+          schemaText={schemaText}
+          schemaError={schemaError}
+          onChange={handleSchemaChange}
+        />
 
-        {tab === 'ic6-generate' && <Intercode6Generator />}
-
-        {tab === 'aztec-reader' && <AztecCodeReader onHexDecoded={handleAztecHexDecoded} />}
+        <EncoderDecoder schema={schema} schemaError={schemaError} />
       </main>
       <Footer />
     </div>

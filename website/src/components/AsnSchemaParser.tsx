@@ -6,43 +6,6 @@ interface AsnSchemaParserProps {
   onSchemaSelect: (schemaText: string) => void;
 }
 
-const UIC_BARCODE_EXAMPLE = `ASN-Module-UicBarcodeHeader DEFINITIONS AUTOMATIC TAGS ::= BEGIN
-
-UicBarcodeHeader ::= SEQUENCE {
-    format IA5String,
-    level2SignedData Level2DataType,
-    level2Signature OCTET STRING OPTIONAL
-}
-
-Level2DataType ::= SEQUENCE {
-    level1Data Level1DataType,
-    level1Signature OCTET STRING OPTIONAL,
-    level2Data DataType OPTIONAL
-}
-
-Level1DataType ::= SEQUENCE {
-    securityProviderNum INTEGER (1..32000) OPTIONAL,
-    securityProviderIA5 IA5String OPTIONAL,
-    keyId INTEGER (0..99999) OPTIONAL,
-    dataSequence SEQUENCE OF DataType,
-    level1KeyAlg OBJECT IDENTIFIER OPTIONAL,
-    level2KeyAlg OBJECT IDENTIFIER OPTIONAL,
-    level1SigningAlg OBJECT IDENTIFIER OPTIONAL,
-    level2SigningAlg OBJECT IDENTIFIER OPTIONAL,
-    level2PublicKey OCTET STRING OPTIONAL,
-    endOfValidityYear INTEGER (2016..2269) OPTIONAL,
-    endOfValidityDay INTEGER (1..366) OPTIONAL,
-    endOfValidityTime INTEGER (0..1439) OPTIONAL,
-    validityDuration INTEGER (1..3600) OPTIONAL
-}
-
-DataType ::= SEQUENCE {
-    dataFormat IA5String,
-    data OCTET STRING
-}
-
-END`;
-
 const SIMPLE_EXAMPLE = `SimpleProtocol DEFINITIONS AUTOMATIC TAGS ::= BEGIN
 
 Message ::= SEQUENCE {
@@ -70,10 +33,23 @@ Payload ::= CHOICE {
 
 END`;
 
+const EXTENSION_EXAMPLE = `ExtensionDemo DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+MessageV2 ::= SEQUENCE {
+    id INTEGER (0..255),
+    name IA5String,
+    ...,
+    email IA5String
+}
+
+Color ::= ENUMERATED { red, green, blue, ..., yellow, purple }
+
+END`;
+
 const EXAMPLES = [
   { label: 'Simple Protocol', text: SIMPLE_EXAMPLE },
   { label: 'Choice Demo', text: CHOICE_EXAMPLE },
-  { label: 'UIC Barcode Header', text: UIC_BARCODE_EXAMPLE },
+  { label: 'Extension Markers', text: EXTENSION_EXAMPLE },
 ];
 
 export default function AsnSchemaParser({ onSchemaSelect }: AsnSchemaParserProps) {

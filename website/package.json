@@ -9,12 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@noble/curves": "^2.0.1",
-    "@noble/hashes": "^2.0.1",
     "peggy": "^5.0.6",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "zxing-wasm": "^2.2.4"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

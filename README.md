@@ -170,11 +170,11 @@ The [`examples/`](./examples/) directory contains detailed usage guides with cod
 
 - **[Schema Parser](./examples/schema-parser.md)** - Parse ASN.1 text notation into `SchemaNode` definitions, constraint options, extension markers, CLI usage
 - **[Encoding](./examples/encoding.md)** - Encode JavaScript objects to PER unaligned binary using `SchemaCodec` or low-level codecs
-- **[Decoding](./examples/decoding.md)** - Decode PER unaligned binary data back into objects, with real-world UIC barcode examples
+- **[Decoding](./examples/decoding.md)** - Decode PER unaligned binary data back into objects
 
-## Pre-generated Schemas
+## Sister Project
 
-The [`schemas/`](./schemas/uic-barcode/) directory contains pre-generated `SchemaNode` JSON files for real-world ASN.1 specifications, ready for use with `SchemaCodec` or `SchemaBuilder.buildAll()`. See the [UIC Barcode schemas README](./schemas/uic-barcode/README.md) for details.
+[**dosipas-ts**](https://github.com/sysdevrun/dosipas-ts) — a TypeScript library built on top of asn1-per-ts for encoding and decoding DOSIPAS / ERA electronic ticket data.
 
 ## Development
 
@@ -185,7 +185,7 @@ npm run build     # Build library
 
 ## Website
 
-The `website/` directory contains a React + TailwindCSS demo app for interactive schema-based encoding/decoding.
+The `website/` directory contains a React + TailwindCSS demo app for interactive ASN.1 PER encoding and decoding.
 
 ```bash
 cd website

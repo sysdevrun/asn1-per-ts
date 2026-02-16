@@ -221,3 +221,7 @@ Level 1 signature:
 ## Evaluate Zod for ASN.1 schema to typed TypeScript objects
 
 Evaluate how Zod could be used to output TypeScript typed objects depending on the ASN JSON schema. Test options on basic types and SEQUENCE. Write a plan.
+
+## Remove UIC/Intercode from website
+
+In website, remove everything related to UIC or intercode. Keep only focus on ASN.1 PER unaligned encoding decoding. Also update README if needed and any reference to it. Add link to https://github.com/sysdevrun/dosipas-ts as sister project using the library.

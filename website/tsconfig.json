@@ -18,11 +18,8 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "asn1-per-ts": ["../src/index.ts"],
-      "intercode6-ts": ["../intercode6-ts/src/index.ts"],
-      "@noble/curves/*": ["./node_modules/@noble/curves/*"],
-      "@noble/hashes/*": ["./node_modules/@noble/hashes/*"]
+      "asn1-per-ts": ["../src/index.ts"]
     }
   },
-  "include": ["src", "../src", "../intercode6-ts/src"]
+  "include": ["src", "../src"]
 }

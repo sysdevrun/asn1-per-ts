@@ -48,6 +48,20 @@ export default function ProjectDescription() {
           <li>Extension marker support for forward compatibility</li>
           <li>ASN.1 text notation parser (paste .asn files directly)</li>
         </ul>
+
+        <h3 className="font-semibold text-gray-900 pt-2">Sister Project</h3>
+        <p>
+          <a
+            href="https://github.com/sysdevrun/dosipas-ts"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-600 hover:underline font-medium"
+          >
+            dosipas-ts
+          </a>{' '}
+          &mdash; a TypeScript library built on top of asn1-per-ts for encoding and decoding
+          DOSIPAS / ERA electronic ticket data.
+        </p>
       </div>
     </section>
   );
