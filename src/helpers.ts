@@ -1,6 +1,6 @@
-import { BitBuffer } from './BitBuffer';
-import type { Codec } from './codecs/Codec';
-import { isRawBytes } from './RawBytes';
+import { BitBuffer } from './BitBuffer.js';
+import type { Codec } from './codecs/Codec.js';
+import { isRawBytes } from './RawBytes.js';
 
 /**
  * Number of bits needed to encode a constrained whole number with range (max - min + 1).

@@ -229,3 +229,7 @@ In website, remove everything related to UIC or intercode. Keep only focus on AS
 ## RawBytes passthrough for pre-encoded data
 
 Add support for passing pre-encoded raw bits when encoding. Create a `RawBytes` class that wraps a `Uint8Array` (+ optional `bitLength` for sub-byte precision). When the encoder encounters a `RawBytes` value for any field, it writes the bits directly to the BitBuffer instead of calling the field's codec. Support this in SEQUENCE fields, CHOICE values, SEQUENCE OF elements, and top-level SchemaCodec encoding. Add `writeRawBits()` to BitBuffer, centralized `encodeValue()` helper in helpers.ts, tests, and documentation in examples/encoding.md.
+
+## Fix broken ESM build
+
+v1.2.0 was published with `"type": "module"` in `package.json` but `tsconfig.build.json` used `"moduleResolution": "bundler"`, which doesn't enforce `.js` extensions on relative imports. Node.js ESM requires explicit `.js` extensions. Fix by changing `tsconfig.build.json` to use `module: "NodeNext"` and `moduleResolution: "NodeNext"`, adding `.js` extensions to all relative imports in `src/`, adding `moduleNameMapper` to `jest.config.cjs` so ts-jest can resolve `.js` imports in CJS test mode, and bumping version to 1.2.1.

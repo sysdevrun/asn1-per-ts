@@ -1,17 +1,17 @@
-import { BitBuffer } from '../BitBuffer';
-import { Codec } from '../codecs/Codec';
-import type { DecodedNode } from '../codecs/DecodedNode';
-import { BooleanCodec } from '../codecs/BooleanCodec';
-import { NullCodec } from '../codecs/NullCodec';
-import { IntegerCodec } from '../codecs/IntegerCodec';
-import { EnumeratedCodec } from '../codecs/EnumeratedCodec';
-import { BitStringCodec } from '../codecs/BitStringCodec';
-import { OctetStringCodec } from '../codecs/OctetStringCodec';
-import { UTF8StringCodec } from '../codecs/UTF8StringCodec';
-import { ChoiceCodec } from '../codecs/ChoiceCodec';
-import { SequenceCodec } from '../codecs/SequenceCodec';
-import { SequenceOfCodec } from '../codecs/SequenceOfCodec';
-import { ObjectIdentifierCodec } from '../codecs/ObjectIdentifierCodec';
+import { BitBuffer } from '../BitBuffer.js';
+import { Codec } from '../codecs/Codec.js';
+import type { DecodedNode } from '../codecs/DecodedNode.js';
+import { BooleanCodec } from '../codecs/BooleanCodec.js';
+import { NullCodec } from '../codecs/NullCodec.js';
+import { IntegerCodec } from '../codecs/IntegerCodec.js';
+import { EnumeratedCodec } from '../codecs/EnumeratedCodec.js';
+import { BitStringCodec } from '../codecs/BitStringCodec.js';
+import { OctetStringCodec } from '../codecs/OctetStringCodec.js';
+import { UTF8StringCodec } from '../codecs/UTF8StringCodec.js';
+import { ChoiceCodec } from '../codecs/ChoiceCodec.js';
+import { SequenceCodec } from '../codecs/SequenceCodec.js';
+import { SequenceOfCodec } from '../codecs/SequenceOfCodec.js';
+import { ObjectIdentifierCodec } from '../codecs/ObjectIdentifierCodec.js';
 
 /**
  * A codec that lazily resolves its target. Used for recursive type references ($ref).

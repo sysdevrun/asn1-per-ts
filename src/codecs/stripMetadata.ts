@@ -1,15 +1,15 @@
-import type { DecodedNode } from './DecodedNode';
-import { BooleanCodec } from './BooleanCodec';
-import { IntegerCodec } from './IntegerCodec';
-import { EnumeratedCodec } from './EnumeratedCodec';
-import { BitStringCodec } from './BitStringCodec';
-import { OctetStringCodec } from './OctetStringCodec';
-import { UTF8StringCodec } from './UTF8StringCodec';
-import { ObjectIdentifierCodec } from './ObjectIdentifierCodec';
-import { NullCodec } from './NullCodec';
-import { SequenceCodec } from './SequenceCodec';
-import { SequenceOfCodec } from './SequenceOfCodec';
-import { ChoiceCodec } from './ChoiceCodec';
+import type { DecodedNode } from './DecodedNode.js';
+import { BooleanCodec } from './BooleanCodec.js';
+import { IntegerCodec } from './IntegerCodec.js';
+import { EnumeratedCodec } from './EnumeratedCodec.js';
+import { BitStringCodec } from './BitStringCodec.js';
+import { OctetStringCodec } from './OctetStringCodec.js';
+import { UTF8StringCodec } from './UTF8StringCodec.js';
+import { ObjectIdentifierCodec } from './ObjectIdentifierCodec.js';
+import { NullCodec } from './NullCodec.js';
+import { SequenceCodec } from './SequenceCodec.js';
+import { SequenceOfCodec } from './SequenceOfCodec.js';
+import { ChoiceCodec } from './ChoiceCodec.js';
 
 /**
  * Walk a DecodedNode tree and reconstruct the plain JS object

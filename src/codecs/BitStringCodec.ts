@@ -1,13 +1,13 @@
-import { BitBuffer } from '../BitBuffer';
-import { Codec } from './Codec';
-import type { DecodedNode } from './DecodedNode';
-import { primitiveDecodeWithMetadata } from './DecodedNode';
+import { BitBuffer } from '../BitBuffer.js';
+import { Codec } from './Codec.js';
+import type { DecodedNode } from './DecodedNode.js';
+import { primitiveDecodeWithMetadata } from './DecodedNode.js';
 import {
   encodeConstrainedLength,
   decodeConstrainedLength,
   encodeUnconstrainedLength,
   decodeUnconstrainedLength,
-} from '../helpers';
+} from '../helpers.js';
 
 export interface BitStringValue {
   /** Raw bytes containing the bits (MSB-first within each byte). */

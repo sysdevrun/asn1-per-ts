@@ -1,11 +1,11 @@
-import { BitBuffer } from '../BitBuffer';
-import { Codec } from './Codec';
-import type { DecodedNode } from './DecodedNode';
-import { primitiveDecodeWithMetadata } from './DecodedNode';
+import { BitBuffer } from '../BitBuffer.js';
+import { Codec } from './Codec.js';
+import type { DecodedNode } from './DecodedNode.js';
+import { primitiveDecodeWithMetadata } from './DecodedNode.js';
 import {
   encodeUnconstrainedLength,
   decodeUnconstrainedLength,
-} from '../helpers';
+} from '../helpers.js';
 
 /**
  * PER unaligned OBJECT IDENTIFIER codec (X.691 §23).

@@ -1,5 +1,5 @@
-export { parseAsn1Module } from './AsnParser';
-export { convertModuleToSchemaNodes } from './toSchemaNode';
+export { parseAsn1Module } from './AsnParser.js';
+export { convertModuleToSchemaNodes } from './toSchemaNode.js';
 export type {
   AsnModule,
   AsnTypeAssignment,
@@ -20,4 +20,4 @@ export type {
   AsnAlternative,
   AsnTypeReference,
   AsnConstrainedType,
-} from './types';
+} from './types.js';

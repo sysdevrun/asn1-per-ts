@@ -1,6 +1,6 @@
 import peggy from 'peggy';
-import { ASN1_GRAMMAR } from './grammar';
-import type { AsnModule } from './types';
+import { ASN1_GRAMMAR } from './grammar.js';
+import type { AsnModule } from './types.js';
 
 let cachedParser: peggy.Parser | null = null;
 

@@ -1,5 +1,5 @@
-import type { BitBuffer } from '../BitBuffer';
-import type { Codec } from './Codec';
+import type { BitBuffer } from '../BitBuffer.js';
+import type { Codec } from './Codec.js';
 
 /** Metadata attached to every decoded node. */
 export interface FieldMeta {

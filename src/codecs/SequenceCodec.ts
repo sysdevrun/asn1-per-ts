@@ -1,13 +1,13 @@
-import { BitBuffer } from '../BitBuffer';
-import { Codec } from './Codec';
-import type { DecodedNode } from './DecodedNode';
+import { BitBuffer } from '../BitBuffer.js';
+import { Codec } from './Codec.js';
+import type { DecodedNode } from './DecodedNode.js';
 import {
   encodeNormallySmallNumber,
   decodeNormallySmallNumber,
   encodeUnconstrainedLength,
   decodeUnconstrainedLength,
   encodeValue,
-} from '../helpers';
+} from '../helpers.js';
 
 export interface SequenceField {
   /** Field name (used as key in the JS object). */

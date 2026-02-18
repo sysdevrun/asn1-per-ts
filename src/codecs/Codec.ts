@@ -1,5 +1,5 @@
-import { BitBuffer } from '../BitBuffer';
-import type { DecodedNode } from './DecodedNode';
+import { BitBuffer } from '../BitBuffer.js';
+import type { DecodedNode } from './DecodedNode.js';
 
 /**
  * Base interface for all PER unaligned codecs.

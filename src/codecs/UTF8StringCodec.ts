@@ -1,14 +1,14 @@
-import { BitBuffer } from '../BitBuffer';
-import { Codec } from './Codec';
-import type { DecodedNode } from './DecodedNode';
-import { primitiveDecodeWithMetadata } from './DecodedNode';
+import { BitBuffer } from '../BitBuffer.js';
+import { Codec } from './Codec.js';
+import type { DecodedNode } from './DecodedNode.js';
+import { primitiveDecodeWithMetadata } from './DecodedNode.js';
 import {
   constrainedWholeNumberBitCount,
   encodeConstrainedLength,
   decodeConstrainedLength,
   encodeUnconstrainedLength,
   decodeUnconstrainedLength,
-} from '../helpers';
+} from '../helpers.js';
 
 export type CharStringType = 'IA5String' | 'VisibleString' | 'UTF8String';
 

@@ -1,7 +1,7 @@
-import { BitBuffer } from '../BitBuffer';
-import { Codec } from './Codec';
-import type { DecodedNode } from './DecodedNode';
-import { primitiveDecodeWithMetadata } from './DecodedNode';
+import { BitBuffer } from '../BitBuffer.js';
+import { Codec } from './Codec.js';
+import type { DecodedNode } from './DecodedNode.js';
+import { primitiveDecodeWithMetadata } from './DecodedNode.js';
 
 /**
  * PER unaligned Null codec (X.691 §14).

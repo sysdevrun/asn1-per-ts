@@ -1,8 +1,8 @@
-import { BitBuffer } from '../BitBuffer';
-import { Codec } from '../codecs/Codec';
-import type { DecodedNode } from '../codecs/DecodedNode';
-import { encodeValue } from '../helpers';
-import { SchemaBuilder, SchemaNode } from './SchemaBuilder';
+import { BitBuffer } from '../BitBuffer.js';
+import { Codec } from '../codecs/Codec.js';
+import type { DecodedNode } from '../codecs/DecodedNode.js';
+import { encodeValue } from '../helpers.js';
+import { SchemaBuilder, SchemaNode } from './SchemaBuilder.js';
 
 /**
  * High-level codec that wraps a schema definition.

@@ -1,6 +1,6 @@
-import { BitBuffer } from '../BitBuffer';
-import { Codec } from './Codec';
-import type { DecodedNode } from './DecodedNode';
+import { BitBuffer } from '../BitBuffer.js';
+import { Codec } from './Codec.js';
+import type { DecodedNode } from './DecodedNode.js';
 import {
   encodeConstrainedWholeNumber,
   decodeConstrainedWholeNumber,
@@ -9,7 +9,7 @@ import {
   encodeUnconstrainedLength,
   decodeUnconstrainedLength,
   encodeValue,
-} from '../helpers';
+} from '../helpers.js';
 
 export interface ChoiceAlternative {
   /** The name/tag of this alternative. */

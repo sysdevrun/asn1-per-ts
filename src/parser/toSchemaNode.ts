@@ -1,11 +1,11 @@
-import type { SchemaNode } from '../schema/SchemaBuilder';
+import type { SchemaNode } from '../schema/SchemaBuilder.js';
 import type {
   AsnModule,
   AsnType,
   AsnField,
   AsnConstraint,
   AsnConstrainedType,
-} from './types';
+} from './types.js';
 
 /**
  * Convert all type assignments in an ASN.1 module to a map of SchemaNode definitions.
