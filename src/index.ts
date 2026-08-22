@@ -3,6 +3,8 @@ export { RawBytes, isRawBytes } from './RawBytes.js';
 export type { Codec } from './codecs/Codec.js';
 export type { DecodedNode, FieldMeta } from './codecs/DecodedNode.js';
 export { stripMetadata } from './codecs/stripMetadata.js';
+export type { Stripped } from './codecs/stripMetadata.js';
+export type { Simplify } from './typeUtils.js';
 export { BooleanCodec } from './codecs/BooleanCodec.js';
 export { IntegerCodec } from './codecs/IntegerCodec.js';
 export type { IntegerConstraints } from './codecs/IntegerCodec.js';
@@ -23,8 +25,22 @@ export type { SequenceField, SequenceOptions } from './codecs/SequenceCodec.js';
 export { SequenceOfCodec } from './codecs/SequenceOfCodec.js';
 export type { SequenceOfConstraints } from './codecs/SequenceOfCodec.js';
 export { SchemaBuilder } from './schema/SchemaBuilder.js';
-export type { SchemaNode } from './schema/SchemaBuilder.js';
-export { SchemaCodec } from './schema/SchemaCodec.js';
+export type { BuiltCodecs } from './schema/SchemaBuilder.js';
+export type {
+  SchemaNode,
+  SchemaRegistry,
+  SchemaField,
+  SchemaAlternative,
+} from './schema/SchemaNode.js';
+export type { Infer, InferInput, InferMetadata, DefaultRefDepth } from './schema/Infer.js';
+export {
+  SchemaCodec,
+  createCodec,
+  createCodecs,
+  defineSchema,
+  defineSchemas,
+} from './schema/SchemaCodec.js';
+export type { SchemaCodecs } from './schema/SchemaCodec.js';
 export { parseAsn1Module } from './parser/AsnParser.js';
 export { convertModuleToSchemaNodes } from './parser/toSchemaNode.js';
 export type {

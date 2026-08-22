@@ -13,6 +13,7 @@ The `examples/` directory contains guides that should be sufficient for most usa
 - `schemas/` - Pre-generated SchemaNode JSON files from real-world ASN.1 specifications
 - `examples/` - Usage guides (encoding, decoding, schema parsing)
   - `examples/schema-parser.md` - Parsing ASN.1 text to SchemaNode, constraint options, CLI usage
+  - `examples/typed-api.md` - Type inference from a schema: `Infer`/`InferInput`/`InferMetadata`, typed `SchemaCodec`, `$ref` registries
   - `examples/encoding.md` - Encoding objects to PER unaligned binary (high-level and low-level APIs)
   - `examples/decoding.md` - Decoding PER unaligned binary back to objects (high-level and low-level APIs)
 - `cli/` - CLI scripts (schema generation)
@@ -38,7 +39,8 @@ The `examples/` directory contains guides that should be sufficient for most usa
 - All type-only re-exports use `export type { ... }` (required by `isolatedModules` in website tsconfig)
 - Codecs implement the `Codec<T>` interface with `encode(buffer, value)` and `decode(buffer)` methods
 - Constraints are passed via constructor options objects
-- Schema definitions use the `SchemaNode` discriminated union type
+- Schema definitions use the `SchemaNode` discriminated union type (`src/schema/SchemaNode.ts`), whose collections are `readonly` so inline schemas keep their literal types
+- `SchemaCodec`, `SchemaBuilder.build` and `createCodec(s)` take the schema as a `const` type parameter; the encoded/decoded/metadata types are computed from it by `src/schema/Infer.ts`. Anything typed as the wide `SchemaNode` union degrades to `unknown`
 - Tests use Jest with `ts-jest` preset, test files live in `tests/` (not colocated)
 - The website imports the library source directly via a Vite alias (`asn1-per-ts` -> `../src`)
 

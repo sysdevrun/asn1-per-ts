@@ -13,6 +13,7 @@ TypeScript library for encoding and decoding data using ASN.1 PER (Packed Encodi
 - **Composite codecs**: CHOICE, SEQUENCE, SEQUENCE OF
 - **Constraint support**: value ranges, size constraints, extensibility markers, default values
 - **Schema-driven encoding**: define types as JSON, encode/decode plain objects
+- **Typed from the schema**: `decode()` returns the type the schema describes and `encode()` rejects values that do not fit — inferred at compile time, with no runtime validation and no extra dependency
 - **Metadata decoding**: `decodeWithMetadata` returns a tree of `DecodedNode` objects with bit positions, raw bytes, and codec references for every field
 
 ## Install
@@ -57,6 +58,28 @@ console.log(hex);
 const decoded = codec.decodeFromHex(hex);
 console.log(decoded);
 ```
+
+### Types come from the schema
+
+The schema is read as a literal type, so the decoded type is derived from it —
+no interface to write, no cast to make:
+
+```typescript
+const decoded = codec.decodeFromHex(hex);
+//    ^? { id: number; active: boolean; status: 'pending' | 'approved' | 'rejected' }
+
+decoded.status; // 'pending' | 'approved' | 'rejected'
+
+codec.encodeToHex({ id: 42, active: true, status: 'unknown' });
+//                                                ~~~~~~~~~ not one of the ENUMERATED values
+```
+
+OPTIONAL fields become optional properties, DEFAULT fields are always present
+after decoding, CHOICE becomes a discriminated union, and `$ref` resolves
+through `createCodecs`. When the schema is only known at runtime (parsed from
+JSON or from ASN.1 text), everything degrades to `unknown` exactly as before.
+
+See [examples/typed-api.md](examples/typed-api.md).
 
 ### Decoding with Metadata
 

@@ -245,3 +245,11 @@ In website, add a new tab. There is a textarea to input an ASN.1 schema. The npm
 ## Add sandbox link to README
 
 Add link to sandbox Website https://sysdevrun.github.io/asn1-per-ts/ at the beginning of the readme.
+
+## Typed encode/decode API inferred from the schema
+
+analyze how the API to encode and decode is designed.
+
+Find a way to create a typed output so when decoding a given schema, typescript knows about the type decoded.
+
+you can change the API

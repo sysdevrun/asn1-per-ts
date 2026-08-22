@@ -27,9 +27,16 @@ const codec = new SchemaCodec({
 
 const decoded = codec.decodeFromHex('2a80');
 // decoded === { id: 42, active: true }
+//    ^? { id: number; active: boolean }
 ```
 
-`SchemaCodec.decodeFromHex()` converts the hex string to bytes internally and runs the decoder. See `src/schema/SchemaCodec.ts:37`.
+`SchemaCodec.decodeFromHex()` converts the hex string to bytes internally and runs the decoder.
+
+The return type is derived from the schema, so TypeScript knows the shape of
+`decoded` without a cast or a hand-written interface. See
+[typed-api.md](./typed-api.md) for the full type mapping, how OPTIONAL and
+DEFAULT fields are typed, and what happens when the schema is only known at
+runtime.
 
 ### Decode from Uint8Array
 
@@ -88,11 +95,19 @@ const codec = new SchemaCodec({
   ],
 });
 
-const decoded = codec.decodeFromHex('95');
-// decoded === { count: 42 } — the CHOICE index selects 'count'
+const decoded = codec.decodeFromHex('9500');
+// decoded === { key: 'count', value: 42 } — the CHOICE index selects 'count'
 ```
 
-CHOICE values decode as an object with a single key matching the chosen alternative name.
+CHOICE values decode as a `{ key, value }` pair: `key` is the name of the chosen
+alternative and `value` is its decoded value. The inferred type is a
+discriminated union, so checking `key` narrows `value`:
+
+```typescript
+if (decoded.key === 'count') {
+  const count: number = decoded.value;
+}
+```
 
 ## Decoding with Metadata
 
@@ -448,9 +463,9 @@ const codec = new ChoiceCodec({
   ],
 });
 
-const buffer = BitBuffer.from(new Uint8Array([0x95]));
+const buffer = BitBuffer.from(new Uint8Array([0x95, 0x00]));
 const value = codec.decode(buffer);
-// value === { count: 42 }
+// value === { key: 'count', value: 42 }
 ```
 
 Options for `ChoiceCodec` (see `src/codecs/ChoiceCodec.ts`):
