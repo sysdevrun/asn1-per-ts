@@ -253,3 +253,9 @@ analyze how the API to encode and decode is designed.
 Find a way to create a typed output so when decoding a given schema, typescript knows about the type decoded.
 
 you can change the API
+
+## Builder DSL and ASN.1 code generation over a common interchange format
+
+build codegen plus DSL with a common interchange format.
+
+do fix rawbytes too

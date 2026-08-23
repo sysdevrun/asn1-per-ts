@@ -13,11 +13,11 @@
  * value parsed from JSON at runtime — every helper here degrades to `unknown`,
  * which is exactly what the untyped API returned before.
  */
-import type { RawBytes } from '../RawBytes.js';
 import type { BitStringValue } from '../codecs/BitStringCodec.js';
 import type { DecodedNode } from '../codecs/DecodedNode.js';
 import type { SchemaAlternative, SchemaField, SchemaNode, SchemaRegistry } from './SchemaNode.js';
 import type { Simplify } from '../typeUtils.js';
+import type { RawInput } from './TypedCodec.js';
 
 
 /** Number of nested `$ref` expansions performed before bailing out to `unknown`. */
@@ -142,17 +142,27 @@ type InferExtensionFields<F extends readonly SchemaField[], R extends SchemaRegi
 /**
  * The TypeScript type accepted when encoding `S`.
  *
- * It differs from {@link Infer} in two ways:
+ * It differs from {@link Infer} in one way: DEFAULT fields may be omitted, and
+ * the encoder writes a presence bit of `0` for them.
  *
- * - DEFAULT fields may be omitted (the encoder writes a presence bit of `0`).
- * - Any node may instead be a {@link RawBytes}, which is written to the buffer
- *   verbatim rather than through the field's codec.
+ * Pre-encoded {@link RawBytes} are *not* accepted here — use
+ * {@link InferInputRaw}, or the `raw` view on the codec, when you need them.
  */
 export type InferInput<
   S,
   R extends SchemaRegistry = Record<never, never>,
   D extends number = DefaultRefDepth,
-> = IsWideSchema<S> extends true ? unknown : RawBytes | InferInputValue<S, R, D>;
+> = IsWideSchema<S> extends true ? unknown : InferInputValue<S, R, D>;
+
+/**
+ * {@link InferInput} widened so a pre-encoded {@link RawBytes} is accepted in
+ * place of any node. Reached at runtime through `codec.raw`.
+ */
+export type InferInputRaw<
+  S,
+  R extends SchemaRegistry = Record<never, never>,
+  D extends number = DefaultRefDepth,
+> = IsWideSchema<S> extends true ? unknown : RawInput<InferInputValue<S, R, D>>;
 
 type InferInputValue<S, R extends SchemaRegistry, D extends number> = [D] extends [never]
   ? unknown

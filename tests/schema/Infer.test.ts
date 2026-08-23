@@ -12,6 +12,7 @@ import type {
   DecodedNode,
   Infer,
   InferInput,
+  InferInputRaw,
   InferMetadata,
   RawBytes,
   SchemaNode,
@@ -85,6 +86,19 @@ describe('Infer — SEQUENCE', () => {
 
   it('lets DEFAULT fields be omitted when encoding', () => {
     type Input = InferInput<typeof schema>;
+    type Expected = {
+      id: number;
+      nickname?: string;
+      version?: number;
+      note?: string;
+    };
+    type Case = Expect<Equal<Input, Expected>>;
+    const _case: Case = true;
+    expect(_case).toBe(true);
+  });
+
+  it('admits RawBytes at any node only in the raw variant', () => {
+    type Raw = InferInputRaw<typeof schema>;
     type Expected =
       | RawBytes
       | {
@@ -93,7 +107,7 @@ describe('Infer — SEQUENCE', () => {
           version?: number | RawBytes;
           note?: string | RawBytes;
         };
-    type Case = Expect<Equal<Input, Expected>>;
+    type Case = Expect<Equal<Raw, Expected>>;
     const _case: Case = true;
     expect(_case).toBe(true);
   });
@@ -344,13 +358,25 @@ describe('typed encoding rejects values that do not fit the schema', () => {
     expect(decoded).toEqual({ id: 1, status: 'on', payload: { key: 'text', value: 'a' } });
   });
 
-  it('accepts pre-encoded RawBytes in place of any node', () => {
+  it('accepts pre-encoded RawBytes through the raw view', () => {
     const inner = createCodec({ type: 'UTF8String' });
-    const hex = codec.encodeToHex({
+    const hex = codec.raw.encodeToHex({
       id: 1,
       status: 'on',
       payload: { key: 'text', value: inner.encodeToRawBytes('a') },
     });
     expect(codec.decodeFromHex(hex)).toEqual({ id: 1, status: 'on', payload: { key: 'text', value: 'a' } });
+  });
+
+  it('keeps RawBytes out of the strict encoder', () => {
+    const inner = createCodec({ type: 'UTF8String' });
+    const pre = inner.encodeToRawBytes('a');
+    // Never called — the @ts-expect-error is the assertion. Allowing RawBytes at
+    // every node doubled the size of every encode error message.
+    const rejected = () => {
+      // @ts-expect-error RawBytes needs the `raw` view
+      codec.encodeToHex({ id: 1, status: 'on', payload: { key: 'text', value: pre } });
+    };
+    expect(typeof rejected).toBe('function');
   });
 });

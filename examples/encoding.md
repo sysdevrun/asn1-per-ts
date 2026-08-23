@@ -427,6 +427,18 @@ const bytes = buffer.toUint8Array();
 
 When embedding a pre-encoded sub-structure inside a larger structure, use `RawBytes` to write pre-encoded bits directly without re-encoding through the field's codec.
 
+### Encoding with RawBytes goes through `codec.raw`
+
+The strict encode signatures do not accept `RawBytes` — folding it into every
+node made every encode error twice as long. Use the `raw` view instead:
+
+```typescript
+codec.raw.encodeToHex({ header: 1, payload: inner.encodeToRawBytes(value) });
+```
+
+`codec.raw` exposes `encode`, `encodeToHex` and `encodeToRawBytes`, each
+accepting `RawBytes` in place of any node. Everything below applies to those.
+
 ### Recommended: `encodeToRawBytes()`
 
 `SchemaCodec.encodeToRawBytes()` encodes a value and returns a `RawBytes` with the exact bit-length preserved. This is the safest way to embed pre-encoded data, since `encode()` returns a `Uint8Array` that loses sub-byte precision.
@@ -455,7 +467,7 @@ const outerCodec = new SchemaCodec(outerSchema);
 
 // Pre-encode the inner structure with exact bit-length
 const raw = innerCodec.encodeToRawBytes({ a: 42, b: true });
-const outerBytes = outerCodec.encode({ header: 1, payload: raw });
+const outerBytes = outerCodec.raw.encode({ header: 1, payload: raw });
 
 // Decoding works normally
 const decoded = outerCodec.decode(outerBytes);
@@ -476,7 +488,7 @@ const outerCodec = new SchemaCodec(outerSchema);
 const buf = BitBuffer.alloc();
 innerCodec.codec.encode(buf, { a: 42, b: true });
 const raw = new RawBytes(buf.toUint8Array(), buf.bitLength);
-const outerBytes = outerCodec.encode({ header: 1, payload: raw });
+const outerBytes = outerCodec.raw.encode({ header: 1, payload: raw });
 ```
 
 ### Sub-byte precision
@@ -517,7 +529,7 @@ Without `bitLength: 3`, the full 8 bits would be written, corrupting the `y` fie
 - **SEQUENCE** fields (mandatory, optional, default, extension)
 - **CHOICE** alternative values (root and extension)
 - **SEQUENCE OF** array elements
-- **Top-level** `SchemaCodec.encode()`, `SchemaCodec.encodeToHex()`, and `SchemaCodec.encodeToRawBytes()`
+- **Top-level** `codec.raw.encode()`, `codec.raw.encodeToHex()`, and `codec.raw.encodeToRawBytes()`
 
 ## Error Handling
 

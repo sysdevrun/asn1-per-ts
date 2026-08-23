@@ -4,7 +4,8 @@ import { Codec } from '../codecs/Codec.js';
 import { encodeValue } from '../helpers.js';
 import { SchemaBuilder } from './SchemaBuilder.js';
 import type { SchemaNode, SchemaRegistry } from './SchemaNode.js';
-import type { Infer, InferInput, InferMetadata } from './Infer.js';
+import type { Infer, InferInput, InferInputRaw, InferMetadata } from './Infer.js';
+import type { RawEncoder, TypedCodec } from './TypedCodec.js';
 
 /** Convert a hex string to the bytes it represents. */
 function hexToBytes(hex: string): Uint8Array {
@@ -44,7 +45,8 @@ function hexToBytes(hex: string): Uint8Array {
 export class SchemaCodec<
   const S extends SchemaNode = SchemaNode,
   R extends SchemaRegistry = Record<never, never>,
-> {
+> implements TypedCodec<Infer<S, R>, InferInput<S, R>, InferMetadata<S, R>>
+{
   private readonly _schema: S;
   private readonly _codec: Codec<unknown>;
 
@@ -99,6 +101,19 @@ export class SchemaCodec<
   /** Decode a hex string with full metadata tree. */
   decodeFromHexWithMetadata(hex: string): InferMetadata<S, R> {
     return this.decodeWithMetadata(hexToBytes(hex));
+  }
+
+  /**
+   * The same encoder, but accepting pre-encoded {@link RawBytes} in place of
+   * any node. Kept separate so the default signatures — and the error messages
+   * they produce — stay free of a `RawBytes |` union at every position.
+   *
+   * ```typescript
+   * codec.raw.encodeToHex({ id: 1, payload: inner.encodeToRawBytes(value) });
+   * ```
+   */
+  get raw(): RawEncoder<InferInput<S, R>> {
+    return this as unknown as RawEncoder<InferInput<S, R>>;
   }
 
   /** The schema this codec was built from. */

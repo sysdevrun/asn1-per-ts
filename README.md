@@ -13,7 +13,8 @@ TypeScript library for encoding and decoding data using ASN.1 PER (Packed Encodi
 - **Composite codecs**: CHOICE, SEQUENCE, SEQUENCE OF
 - **Constraint support**: value ranges, size constraints, extensibility markers, default values
 - **Schema-driven encoding**: define types as JSON, encode/decode plain objects
-- **Typed from the schema**: `decode()` returns the type the schema describes and `encode()` rejects values that do not fit — inferred at compile time, with no runtime validation and no extra dependency
+- **Typed from the schema**: `decode()` returns the type the schema describes and `encode()` rejects values that do not fit — at compile time, with no runtime validation and no extra dependency
+- **Three ways to say it**: an inline `SchemaNode`, the `asn` builder DSL, or TypeScript generated from a `.asn` file — all sharing one interchange format and one codec interface
 - **Metadata decoding**: `decodeWithMetadata` returns a tree of `DecodedNode` objects with bit positions, raw bytes, and codec references for every field
 
 ## Install
@@ -79,7 +80,35 @@ after decoding, CHOICE becomes a discriminated union, and `$ref` resolves
 through `createCodecs`. When the schema is only known at runtime (parsed from
 JSON or from ASN.1 text), everything degrades to `unknown` exactly as before.
 
-See [examples/typed-api.md](examples/typed-api.md).
+### Three front-ends, one interchange format
+
+`SchemaNode` is the interchange format; the three ways of describing a type all
+produce it and all hand back the same `TypedCodec`.
+
+```typescript
+// 1. inline SchemaNode — the schema is data, types are read from the literal
+const fromLiteral = new SchemaCodec({ type: 'SEQUENCE', fields: [/* … */] });
+
+// 2. the asn DSL — types ride in the value, no widening traps, short errors
+const fromDsl = asn.codec(
+  asn.sequence({
+    id: asn.integer({ min: 0, max: 255 }),
+    status: asn.enumerated(['pending', 'approved']),
+    nickname: asn.ia5String().optional(),
+  }),
+);
+
+// 3. generated from ASN.1 — named types, cheapest to compile, best errors
+//    npx tsx cli/generate-types.ts ticket.asn src/generated/ticket.ts
+import { codecs } from './generated/ticket.js';
+```
+
+Pick by where the schema comes from: generate from `.asn` files, use the DSL for
+hand-written schemas, use `SchemaNode` when the schema itself is data.
+
+- [examples/typed-api.md](examples/typed-api.md) — inline schemas and the `Infer` types
+- [examples/dsl.md](examples/dsl.md) — the `asn` builder DSL
+- [examples/codegen.md](examples/codegen.md) — generating TypeScript from ASN.1
 
 ### Decoding with Metadata
 

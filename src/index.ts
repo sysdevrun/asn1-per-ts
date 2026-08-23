@@ -32,7 +32,13 @@ export type {
   SchemaField,
   SchemaAlternative,
 } from './schema/SchemaNode.js';
-export type { Infer, InferInput, InferMetadata, DefaultRefDepth } from './schema/Infer.js';
+export type {
+  Infer,
+  InferInput,
+  InferInputRaw,
+  InferMetadata,
+  DefaultRefDepth,
+} from './schema/Infer.js';
 export {
   SchemaCodec,
   createCodec,
@@ -41,6 +47,23 @@ export {
   defineSchemas,
 } from './schema/SchemaCodec.js';
 export type { SchemaCodecs } from './schema/SchemaCodec.js';
+export type { RawEncoder, RawInput, TypedCodec } from './schema/TypedCodec.js';
+export { asn } from './dsl/index.js';
+export type {
+  AnySchema,
+  CodecOf,
+  CodecsOf,
+  DefaultSchema,
+  InputOf,
+  NodeOf,
+  OptionalSchema,
+  Schema,
+  SchemaFor,
+  SchemaModule,
+  TypeOf,
+} from './dsl/index.js';
+export { generateTypeScript } from './codegen/index.js';
+export type { CodegenOptions } from './codegen/index.js';
 export { parseAsn1Module } from './parser/AsnParser.js';
 export { convertModuleToSchemaNodes } from './parser/toSchemaNode.js';
 export type {

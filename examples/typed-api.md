@@ -7,6 +7,31 @@ rejects values that do not fit the schema.
 This is entirely a compile-time feature: no validation code runs, no runtime
 dependency is added, and the emitted JavaScript is unchanged.
 
+## One interchange format, three front-ends
+
+`SchemaNode` is the interchange format. Everything produces it, and everything
+consumes it:
+
+```
+  ASN.1 text ──parseAsn1Module──┐
+                                │
+  asn DSL ─────asn.toSchemaNode─┼──▶  SchemaNode  ──┬── SchemaBuilder ──▶ codecs
+                                │    (interchange)  │
+  SchemaNode literal ───────────┘                   └── generateTypeScript ──▶ .ts
+```
+
+All three hand back the same `TypedCodec<TOut, TIn, TNode>`; only the way the
+type arguments are computed differs.
+
+| Front-end | Types come from | Best for |
+|---|---|---|
+| **Literal `SchemaNode`** (this guide) | `Infer<S>` reading the literal type | schemas written inline, small and medium |
+| **[`asn` DSL](./dsl.md)** | the value's own type parameters | hand-authored schemas; no widening traps, short errors |
+| **[Codegen](./codegen.md)** | generated named interfaces | `.asn` files, large schemas, best errors |
+
+If your schema lives in a `.asn` file, generate. If you write it by hand, the
+DSL is usually more comfortable. This guide covers the literal API.
+
 ## The short version
 
 ```typescript
@@ -48,6 +73,7 @@ Three type helpers are exported, one per direction:
 |---|---|---|
 | `Infer<S>` | what `decode()` returns | `decode`, `decodeFromHex` |
 | `InferInput<S>` | what `encode()` accepts | `encode`, `encodeToHex`, `encodeToRawBytes` |
+| `InferInputRaw<S>` | the same, allowing `RawBytes` at any node | `codec.raw.*` |
 | `InferMetadata<S>` | the `DecodedNode` tree | `decodeWithMetadata`, `decodeFromHexWithMetadata` |
 
 They can also be used directly to name a type:
@@ -203,18 +229,22 @@ matches `decode()`.
 
 ## Pre-encoded `RawBytes`
 
-Any node may be given as a `RawBytes` instead of a value, and the encoder
-writes those bits verbatim. `InferInput` reflects that, so this still
-type-checks:
+Any node may be given as a `RawBytes` instead of a value, and the encoder writes
+those bits verbatim. That is reached through `codec.raw`:
 
 ```typescript
 const inner = new SchemaCodec({ type: 'UTF8String' });
 
-codec.encodeToHex({
+codec.raw.encodeToHex({
   key: 'text',
   value: inner.encodeToRawBytes('hello'),
 });
 ```
+
+`codec.raw` exposes `encode`, `encodeToHex` and `encodeToRawBytes` with every
+node widened to accept `RawBytes`. The default methods do not accept it: folding
+`RawBytes` into every position doubled the size of every type printed in an
+encode error, for a feature most values never use.
 
 ## Schemas that are only known at runtime
 
