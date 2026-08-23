@@ -69,6 +69,17 @@ describe('generateTypeScript', () => {
     expect(without).not.toContain('BitStringValue');
   });
 
+  it('imports nothing when only types are emitted and none are needed', () => {
+    // An unused import breaks a consumer building with noUnusedLocals.
+    expect(gen({ A: { type: 'BOOLEAN' } })).not.toContain('import');
+  });
+
+  it('imports the runtime only when the runtime values are emitted', () => {
+    const full = generateTypeScript({ A: { type: 'BOOLEAN' } });
+    expect(full).toContain("import { createCodecs } from 'asn1-per-ts';");
+    expect(full).toContain('SchemaRegistry, TypedCodec');
+  });
+
   it('folds extension values into the ENUMERATED union', () => {
     const out = gen({
       Channel: { type: 'ENUMERATED', values: ['a', 'b'], extensionValues: ['c'] },

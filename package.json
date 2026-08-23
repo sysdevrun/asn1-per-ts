@@ -13,7 +13,12 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "sideEffects": false,
+  "bin": {
+    "asn1-per-ts": "dist/cli/main.js"
+  },
+  "sideEffects": [
+    "./dist/cli/main.js"
+  ],
   "files": [
     "dist"
   ],

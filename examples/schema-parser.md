@@ -121,17 +121,17 @@ codecs.Tree.encode(buffer, {
 
 ## CLI Usage
 
-The `cli/generate-schema.ts` tool converts an `.asn` file to a `.schema.json` file from the command line:
+The `asn1-per-ts` binary converts an `.asn` file to a `.schema.json` file from the command line:
 
 ```bash
 # Print schema JSON to stdout
-npx tsx cli/generate-schema.ts input.asn
+npx asn1-per-ts schema input.asn
 
 # Write schema JSON to a file
-npx tsx cli/generate-schema.ts input.asn output.schema.json
+npx asn1-per-ts schema input.asn output.schema.json
 ```
 
-The tool reads the ASN.1 file, parses it, converts all type assignments, and outputs a single JSON object mapping type names to `SchemaNode` definitions. See `cli/generate-schema.ts` for the implementation.
+The tool reads the ASN.1 file, parses it, converts all type assignments, and outputs a single JSON object mapping type names to `SchemaNode` definitions. With no output path it writes to stdout. See `src/cli/cli.ts` for the implementation, and [codegen.md](./codegen.md) for the `types` subcommand that emits TypeScript instead of JSON.
 
 ## Supported ASN.1 Types
 
@@ -292,4 +292,4 @@ See `src/schema/SchemaBuilder.ts` for the full `SchemaNode` type definition.
 | `src/parser/types.ts` | TypeScript types for ASN.1 AST (`AsnModule`, `AsnType`, etc.) |
 | `src/schema/SchemaBuilder.ts` | `SchemaBuilder.build()` / `buildAll()` - builds codecs from SchemaNode |
 | `src/schema/SchemaCodec.ts` | `SchemaCodec` - high-level encode/decode with hex helpers |
-| `cli/generate-schema.ts` | CLI tool to convert `.asn` files to `.schema.json` |
+| `src/cli/cli.ts` | CLI: `asn1-per-ts schema` (`.asn` to `.schema.json`) and `asn1-per-ts types` (`.asn` to TypeScript) |

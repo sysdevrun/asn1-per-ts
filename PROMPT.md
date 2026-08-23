@@ -259,3 +259,7 @@ you can change the API
 build codegen plus DSL with a common interchange format.
 
 do fix rawbytes too
+
+## Ship the CLI as a package bin
+
+i want the bin

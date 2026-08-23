@@ -60,11 +60,16 @@ export function generateTypeScript(schemas: SchemaRegistry, options: CodegenOpti
   if (moduleName) out.push(`// ASN.1 module: ${moduleName}`);
   out.push('');
 
-  const typeImports = ['SchemaRegistry', 'TypedCodec'];
+  // Only import what the emitted code actually references: an unused import is
+  // an error under noUnusedLocals and lint noise everywhere else.
+  const typeImports: string[] = [];
+  if (emitRuntime) typeImports.push('SchemaRegistry', 'TypedCodec');
   if (usesBitString) typeImports.push('BitStringValue');
   if (emitRuntime) out.push(`import { createCodecs } from '${importFrom}';`);
-  out.push(`import type { ${typeImports.sort().join(', ')} } from '${importFrom}';`);
-  out.push('');
+  if (typeImports.length > 0) {
+    out.push(`import type { ${typeImports.sort().join(', ')} } from '${importFrom}';`);
+  }
+  if (emitRuntime || typeImports.length > 0) out.push('');
 
   for (const asnName of asnNames) {
     const name = names.get(asnName)!;

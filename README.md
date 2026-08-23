@@ -23,6 +23,13 @@ TypeScript library for encoding and decoding data using ASN.1 PER (Packed Encodi
 npm install asn1-per-ts
 ```
 
+The package also installs an `asn1-per-ts` command:
+
+```bash
+npx asn1-per-ts types  ticket.asn src/generated/ticket.ts  # TypeScript types + codecs
+npx asn1-per-ts schema ticket.asn ticket.schema.json       # SchemaNode JSON
+```
+
 ## Usage
 
 ### Low-level codec API
@@ -99,7 +106,7 @@ const fromDsl = asn.codec(
 );
 
 // 3. generated from ASN.1 — named types, cheapest to compile, best errors
-//    npx tsx cli/generate-types.ts ticket.asn src/generated/ticket.ts
+//    npx asn1-per-ts types ticket.asn src/generated/ticket.ts
 import { codecs } from './generated/ticket.js';
 ```
 

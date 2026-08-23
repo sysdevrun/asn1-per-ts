@@ -7,17 +7,38 @@ and it is the cheapest of the three to compile.
 
 ## Running it
 
+The package installs an `asn1-per-ts` binary:
+
 ```bash
-npx tsx cli/generate-types.ts ticket.asn src/generated/ticket.ts
+npx asn1-per-ts types ticket.asn src/generated/ticket.ts
 ```
 
 The input may be an `.asn` file or a `.json` registry of `SchemaNode`s, as
-produced by `cli/generate-schema.ts`. With no output path the module is written
-to stdout.
+produced by `asn1-per-ts schema`. With no output path the module is written to
+stdout, so it pipes:
+
+```bash
+npx asn1-per-ts types ticket.asn | prettier --parser typescript > ticket.ts
+```
 
 | Flag | Meaning |
 |---|---|
 | `--import-from <spec>` | Import specifier for the runtime. Defaults to `asn1-per-ts`. |
+| `--no-runtime` | Emit only the types, without `schemas` and `codecs`. |
+
+Progress messages go to stderr and the generated module to stdout, so
+redirecting stdout gives you a clean file. The exit code is `0` on success and
+`1` on failure — a missing file or an ASN.1 syntax error is reported as a
+message, not a stack trace.
+
+Run `npx asn1-per-ts --help` for the full usage, including the `schema`
+subcommand that emits `SchemaNode` JSON.
+
+Working inside this repository, run it from source instead:
+
+```bash
+npx tsx src/cli/main.ts types ticket.asn out.ts
+```
 
 The generator is also exported, so you can wire it into your own build:
 

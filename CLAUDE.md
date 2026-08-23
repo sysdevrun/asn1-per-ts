@@ -21,7 +21,7 @@ The `examples/` directory contains guides that should be sufficient for most usa
   - `examples/codegen.md` - Generating TypeScript types and codecs from an ASN.1 file
   - `examples/encoding.md` - Encoding objects to PER unaligned binary (high-level and low-level APIs)
   - `examples/decoding.md` - Decoding PER unaligned binary back to objects (high-level and low-level APIs)
-- `cli/` - CLI scripts (`generate-schema.ts` for SchemaNode JSON, `generate-types.ts` for TypeScript)
+  - `src/cli/` - The `asn1-per-ts` binary (`cli.ts` is the testable router, `main.ts` the Node entry point)
 - `website/` - React + TypeScript + TailwindCSS demo app (Vite, deployed to GitHub Pages)
 
 ## Commands
@@ -31,6 +31,9 @@ The `examples/` directory contains guides that should be sufficient for most usa
 - `npm test` - Run all unit tests with Jest
 - `npm run build` - Build the library to `dist/` via TypeScript compiler
 - `npx tsc --noEmit` - Type-check without emitting
+- `npx tsx src/cli/main.ts types <in.asn> [out.ts]` - Run the CLI from source
+- Regenerate the codegen fixture after changing the generator:
+  `npx tsx src/cli/main.ts types tests/fixtures/sample-module.asn tests/fixtures/generated/sampleModule.ts --import-from ../../../src/index.js`
 
 ### Website (`website/` directory)
 
@@ -49,6 +52,7 @@ The `examples/` directory contains guides that should be sufficient for most usa
 - Every front-end (inline `SchemaNode`, `asn` DSL, codegen) compiles to a `SchemaNode` and returns the same `TypedCodec<TOut, TIn, TNode>` interface. Keep that true when adding features
 - `RawBytes` passthrough is reached via `codec.raw`, never the default encode signatures — it used to widen every node and doubled the length of every encode error
 - `tests/fixtures/generated/sampleModule.ts` is checked-in codegen output; `tests/codegen/generatedModule.test.ts` asserts the generator still reproduces it, and ts-jest compiles it
+- The CLI lives in `src/` so the build ships it as the `asn1-per-ts` bin. Keep the argument handling in `src/cli/cli.ts` behind the `CliIo` interface — `src/cli/main.ts` is the only part that touches `fs` or `process`, and the tests drive `runCli` with an in-memory IO
 - Tests use Jest with `ts-jest` preset, test files live in `tests/` (not colocated)
 - The website imports the library source directly via a Vite alias (`asn1-per-ts` -> `../src`)
 
