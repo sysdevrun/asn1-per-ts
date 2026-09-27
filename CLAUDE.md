@@ -12,8 +12,8 @@ The `examples/` directory contains guides that should be sufficient for most usa
   - `src/schema/` - `SchemaNode` interchange format, `SchemaBuilder`, `SchemaCodec`, `Infer` types, `TypedCodec`
   - `src/dsl/` - The `asn` builder DSL, compiling down to `SchemaNode`
   - `src/codegen/` - `SchemaNode` registry to TypeScript source
+  - `src/cli/` - The `asn1-per-ts` binary (`cli.ts` is the testable router, `main.ts` the Node entry point)
 - `tests/` - Jest unit tests mirroring the src structure
-- `schemas/` - Pre-generated SchemaNode JSON files from real-world ASN.1 specifications
 - `examples/` - Usage guides (encoding, decoding, schema parsing)
   - `examples/schema-parser.md` - Parsing ASN.1 text to SchemaNode, constraint options, CLI usage
   - `examples/typed-api.md` - Type inference from a schema: `Infer`/`InferInput`/`InferMetadata`, typed `SchemaCodec`, `$ref` registries
@@ -21,8 +21,8 @@ The `examples/` directory contains guides that should be sufficient for most usa
   - `examples/codegen.md` - Generating TypeScript types and codecs from an ASN.1 file
   - `examples/encoding.md` - Encoding objects to PER unaligned binary (high-level and low-level APIs)
   - `examples/decoding.md` - Decoding PER unaligned binary back to objects (high-level and low-level APIs)
-  - `src/cli/` - The `asn1-per-ts` binary (`cli.ts` is the testable router, `main.ts` the Node entry point)
 - `website/` - React + TypeScript + TailwindCSS demo app (Vite, deployed to GitHub Pages)
+- `CHANGELOG.md` - Notable changes, newest first. Add to `## [Unreleased]` when changing public API or behaviour; `PUBLISH.md` folds it into a release
 
 ## Commands
 

@@ -263,3 +263,7 @@ do fix rawbytes too
 ## Ship the CLI as a package bin
 
 i want the bin
+
+## Audit changelog and README against the typed-API changes
+
+does changelog and readme up to date with the changes?
