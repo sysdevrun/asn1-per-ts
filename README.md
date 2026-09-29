@@ -9,16 +9,26 @@ TypeScript library for encoding and decoding data using ASN.1 PER (Packed Encodi
 ## Features
 
 - **Bit-level buffer** with MSB-first encoding and automatic growth
-- **Primitive codecs**: BOOLEAN, INTEGER, ENUMERATED, BIT STRING, OCTET STRING, IA5String, VisibleString, UTF8String, NULL
+- **Primitive codecs**: BOOLEAN, INTEGER, ENUMERATED, BIT STRING, OCTET STRING, OBJECT IDENTIFIER, IA5String, VisibleString, UTF8String, NULL
 - **Composite codecs**: CHOICE, SEQUENCE, SEQUENCE OF
 - **Constraint support**: value ranges, size constraints, extensibility markers, default values
 - **Schema-driven encoding**: define types as JSON, encode/decode plain objects
+- **Typed from the schema**: `decode()` returns the type the schema describes and `encode()` rejects values that do not fit — at compile time, with no runtime validation and no extra dependency
+- **Three ways to say it**: an inline `SchemaNode`, the `asn` builder DSL, or TypeScript generated from a `.asn` file — all sharing one interchange format and one codec interface
 - **Metadata decoding**: `decodeWithMetadata` returns a tree of `DecodedNode` objects with bit positions, raw bytes, and codec references for every field
+- **Pre-encoded passthrough**: embed already-encoded bits verbatim with `RawBytes`, via `codec.raw`
 
 ## Install
 
 ```bash
 npm install asn1-per-ts
+```
+
+The package also installs an `asn1-per-ts` command:
+
+```bash
+npx asn1-per-ts types  ticket.asn src/generated/ticket.ts  # TypeScript types + codecs
+npx asn1-per-ts schema ticket.asn ticket.schema.json       # SchemaNode JSON
 ```
 
 ## Usage
@@ -58,13 +68,64 @@ const decoded = codec.decodeFromHex(hex);
 console.log(decoded);
 ```
 
+### Types come from the schema
+
+The schema is read as a literal type, so the decoded type is derived from it —
+no interface to write, no cast to make:
+
+```typescript
+const decoded = codec.decodeFromHex(hex);
+//    ^? { id: number; active: boolean; status: 'pending' | 'approved' | 'rejected' }
+
+decoded.status; // 'pending' | 'approved' | 'rejected'
+
+codec.encodeToHex({ id: 42, active: true, status: 'unknown' });
+//                                                ~~~~~~~~~ not one of the ENUMERATED values
+```
+
+OPTIONAL fields become optional properties, DEFAULT fields are always present
+after decoding, CHOICE becomes a discriminated union, and `$ref` resolves
+through `createCodecs`. When the schema is only known at runtime (parsed from
+JSON or from ASN.1 text), everything degrades to `unknown` exactly as before.
+
+### Three front-ends, one interchange format
+
+`SchemaNode` is the interchange format; the three ways of describing a type all
+produce it and all hand back the same `TypedCodec`.
+
+```typescript
+import { SchemaCodec, asn } from 'asn1-per-ts';
+
+// 1. inline SchemaNode — the schema is data, types are read from the literal
+const fromLiteral = new SchemaCodec({ type: 'SEQUENCE', fields: [/* … */] });
+
+// 2. the asn DSL — types ride in the value, no widening traps, short errors
+const fromDsl = asn.codec(
+  asn.sequence({
+    id: asn.integer({ min: 0, max: 255 }),
+    status: asn.enumerated(['pending', 'approved']),
+    nickname: asn.ia5String().optional(),
+  }),
+);
+
+// 3. generated from ASN.1 — named types, cheapest to compile, best errors
+//    npx asn1-per-ts types ticket.asn src/generated/ticket.ts
+import { codecs } from './generated/ticket.js';
+```
+
+Pick by where the schema comes from: generate from `.asn` files, use the DSL for
+hand-written schemas, use `SchemaNode` when the schema itself is data.
+
+- [examples/typed-api.md](examples/typed-api.md) — inline schemas and the `Infer` types
+- [examples/dsl.md](examples/dsl.md) — the `asn` builder DSL
+- [examples/codegen.md](examples/codegen.md) — generating TypeScript from ASN.1
+
 ### Decoding with Metadata
 
 `decodeWithMetadata` returns a `DecodedNode` tree with full encoding metadata (bit offsets, bit lengths, raw bytes, codec references) for every field. Use `stripMetadata` to convert back to a plain object identical to `decode()`.
 
 ```typescript
 import { SchemaCodec, stripMetadata } from 'asn1-per-ts';
-import type { DecodedNode } from 'asn1-per-ts';
 
 const codec = new SchemaCodec({
   type: 'SEQUENCE',
@@ -77,14 +138,13 @@ const codec = new SchemaCodec({
 const hex = codec.encodeToHex({ id: 42, active: true });
 const node = codec.decodeFromHexWithMetadata(hex);
 
-// Access field metadata
-const fields = node.value as Record<string, DecodedNode>;
-console.log(fields.id.value);           // 42
-console.log(fields.id.meta.bitOffset);  // 0
-console.log(fields.id.meta.bitLength);  // 8
-console.log(fields.id.meta.rawBytes);   // Uint8Array([0x2a])
+// The tree is typed from the schema — no cast needed
+console.log(node.value.id.value);           // 42 (number)
+console.log(node.value.id.meta.bitOffset);  // 0
+console.log(node.value.id.meta.bitLength);  // 8
+console.log(node.value.id.meta.rawBytes);   // Uint8Array([0x2a])
 
-// Strip metadata to get plain object
+// Strip metadata to get the plain object, with the same type as decode()
 const plain = stripMetadata(node);
 // plain === { id: 42, active: true }
 ```
@@ -160,6 +220,7 @@ Key distinction: providing an empty array (`extensionFields: []`) marks the type
 | `ENUMERATED` | Indexed enumeration with optional extensions |
 | `BIT STRING` | Bit sequences with size constraints |
 | `OCTET STRING` | Byte sequences with size constraints |
+| `OBJECT IDENTIFIER` | Dot-notation OIDs |
 | `IA5String` | ASCII strings with optional alphabet constraints |
 | `VisibleString` | Printable strings with optional alphabet constraints |
 | `UTF8String` | UTF-8 encoded strings |
@@ -172,6 +233,9 @@ Key distinction: providing an empty array (`extensionFields: []`) marks the type
 
 The [`examples/`](./examples/) directory contains detailed usage guides with code samples:
 
+- **[Typed API](./examples/typed-api.md)** - Types inferred from an inline schema: `Infer`, `InferInput`, `InferMetadata`, `$ref` registries
+- **[Builder DSL](./examples/dsl.md)** - The `asn` DSL, where types ride in the value instead of being read from literals
+- **[Code generation](./examples/codegen.md)** - Generating TypeScript types and codecs from a `.asn` file
 - **[Schema Parser](./examples/schema-parser.md)** - Parse ASN.1 text notation into `SchemaNode` definitions, constraint options, extension markers, CLI usage
 - **[Encoding](./examples/encoding.md)** - Encode JavaScript objects to PER unaligned binary using `SchemaCodec` or low-level codecs
 - **[Decoding](./examples/decoding.md)** - Decode PER unaligned binary data back into objects
@@ -183,9 +247,16 @@ The [`examples/`](./examples/) directory contains detailed usage guides with cod
 ## Development
 
 ```bash
-npm test          # Run tests
-npm run build     # Build library
+npm test             # Run tests
+npm run build        # Build library to dist/
+npx tsc --noEmit     # Type-check without emitting
+
+# Run the CLI from source, without building
+npx tsx src/cli/main.ts types <in.asn> [out.ts]
 ```
+
+Changes are recorded in [CHANGELOG.md](./CHANGELOG.md); releasing is described in
+[PUBLISH.md](./PUBLISH.md).
 
 ## Website
 

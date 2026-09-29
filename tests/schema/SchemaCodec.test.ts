@@ -76,6 +76,8 @@ describe('SchemaCodec', () => {
           { name: 'b', schema: { type: 'BOOLEAN' } },
         ],
       });
+      // The typed API rejects this at compile time; the runtime guard still throws.
+      // @ts-expect-error mandatory field 'b' is missing
       expect(() => codec.encode({ a: true })).toThrow();
     });
   });

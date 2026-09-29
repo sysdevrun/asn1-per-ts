@@ -1,0 +1,32 @@
+Sample-Module DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+  Sales-Channel ::= ENUMERATED { online, counter, mobile, ... , partner }
+
+  Issuing-Detail ::= SEQUENCE {
+    issuer-num      INTEGER (1..32000),
+    issuing-year    INTEGER (2016..2269) DEFAULT 2024,
+    security-token  OCTET STRING (SIZE(1..64)) OPTIONAL,
+    channel         Sales-Channel,
+    ...
+  }
+
+  Payload ::= CHOICE {
+    text     UTF8String,
+    binary   OCTET STRING,
+    detail   Issuing-Detail
+  }
+
+  Tree-Node ::= SEQUENCE {
+    label     IA5String (SIZE(1..20)),
+    flags     BIT STRING (SIZE(8)),
+    children  SEQUENCE (SIZE(0..5)) OF Tree-Node OPTIONAL
+  }
+
+  Envelope ::= SEQUENCE {
+    version   INTEGER (0..15) DEFAULT 1,
+    detail    Issuing-Detail,
+    payload   Payload,
+    tree      Tree-Node
+  }
+
+END

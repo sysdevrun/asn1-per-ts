@@ -25,8 +25,14 @@ export interface FieldMeta {
   isExtension?: boolean;
 }
 
-/** A decoded value wrapped with encoding metadata. */
-export interface DecodedNode {
+/**
+ * A decoded value wrapped with encoding metadata.
+ *
+ * @typeParam T - The shape of {@link DecodedNode.value}. Left as `unknown` by
+ * the low-level codecs; the schema API narrows it through
+ * {@link ../schema/Infer.js#InferMetadata | InferMetadata}.
+ */
+export interface DecodedNode<T = unknown> {
   /**
    * The decoded value. Its shape depends on the codec:
    *
@@ -44,7 +50,7 @@ export interface DecodedNode {
    *   { key: string; value: DecodedNode } — the selected alternative
    *   is a wrapped node.
    */
-  value: unknown;
+  value: T;
   meta: FieldMeta;
 }
 

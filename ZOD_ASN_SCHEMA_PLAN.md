@@ -1,3 +1,12 @@
+> **Status: superseded.** The goal below — typed encode/decode output derived
+> from a `SchemaNode` — was implemented without Zod, as pure type-level
+> inference (`Infer`, `InferInput`, `InferMetadata` in `src/schema/Infer.ts`).
+> That adds no runtime dependency and no bundle size. What this plan offers and
+> the implementation does not is *runtime validation* of values before
+> encoding; the codecs' own constraint checks cover most of it. See
+> [examples/typed-api.md](examples/typed-api.md). This document is kept for the
+> design discussion it records.
+
 # Zod for ASN.1 Schema → Typed TypeScript Objects
 
 ## Problem Statement

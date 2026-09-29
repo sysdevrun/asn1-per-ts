@@ -28,7 +28,12 @@ const hex = codec.encodeToHex({ id: 42, active: true });
 // hex === '2a80'
 ```
 
-`SchemaCodec.encodeToHex()` allocates a `BitBuffer`, encodes the value, and returns the hex representation. See `src/schema/SchemaCodec.ts:24`.
+`SchemaCodec.encodeToHex()` allocates a `BitBuffer`, encodes the value, and returns the hex representation.
+
+The accepted value type is derived from the schema, so a missing mandatory
+field or a misspelled ENUMERATED value is a compile error rather than a runtime
+one. See [typed-api.md](./typed-api.md) for the details, including why DEFAULT
+fields may be omitted and OPTIONAL fields may not be mistyped.
 
 ### Encode to Uint8Array
 
@@ -93,13 +98,17 @@ const codec = new SchemaCodec({
 });
 
 // Encode the 'count' alternative
-const hex = codec.encodeToHex({ count: 42 });
+const hex = codec.encodeToHex({ key: 'count', value: 42 });
+// hex === '9500'
 
 // Encode the 'flag' alternative
-const hex2 = codec.encodeToHex({ flag: true });
+const hex2 = codec.encodeToHex({ key: 'flag', value: true });
 ```
 
-CHOICE values are encoded as an object with a single key matching one of the alternative names. The CHOICE index is encoded first, followed by the alternative's value.
+CHOICE values are encoded as a `{ key, value }` pair: `key` names one of the alternatives and `value` is the value for that alternative. The CHOICE index is encoded first, followed by the alternative's value.
+
+The inferred input type pairs each `key` with the type its own alternative
+accepts, so `{ key: 'flag', value: 42 }` is a compile error.
 
 ### Encode SEQUENCE OF (arrays)
 
@@ -376,7 +385,7 @@ const codec = new ChoiceCodec({
 });
 
 const buffer = BitBuffer.alloc();
-codec.encode(buffer, { count: 42 });
+codec.encode(buffer, { key: 'count', value: 42 });
 // Encodes CHOICE index 1 + value 42
 ```
 
@@ -418,6 +427,18 @@ const bytes = buffer.toUint8Array();
 
 When embedding a pre-encoded sub-structure inside a larger structure, use `RawBytes` to write pre-encoded bits directly without re-encoding through the field's codec.
 
+### Encoding with RawBytes goes through `codec.raw`
+
+The strict encode signatures do not accept `RawBytes` — folding it into every
+node made every encode error twice as long. Use the `raw` view instead:
+
+```typescript
+codec.raw.encodeToHex({ header: 1, payload: inner.encodeToRawBytes(value) });
+```
+
+`codec.raw` exposes `encode`, `encodeToHex` and `encodeToRawBytes`, each
+accepting `RawBytes` in place of any node. Everything below applies to those.
+
 ### Recommended: `encodeToRawBytes()`
 
 `SchemaCodec.encodeToRawBytes()` encodes a value and returns a `RawBytes` with the exact bit-length preserved. This is the safest way to embed pre-encoded data, since `encode()` returns a `Uint8Array` that loses sub-byte precision.
@@ -446,7 +467,7 @@ const outerCodec = new SchemaCodec(outerSchema);
 
 // Pre-encode the inner structure with exact bit-length
 const raw = innerCodec.encodeToRawBytes({ a: 42, b: true });
-const outerBytes = outerCodec.encode({ header: 1, payload: raw });
+const outerBytes = outerCodec.raw.encode({ header: 1, payload: raw });
 
 // Decoding works normally
 const decoded = outerCodec.decode(outerBytes);
@@ -467,7 +488,7 @@ const outerCodec = new SchemaCodec(outerSchema);
 const buf = BitBuffer.alloc();
 innerCodec.codec.encode(buf, { a: 42, b: true });
 const raw = new RawBytes(buf.toUint8Array(), buf.bitLength);
-const outerBytes = outerCodec.encode({ header: 1, payload: raw });
+const outerBytes = outerCodec.raw.encode({ header: 1, payload: raw });
 ```
 
 ### Sub-byte precision
@@ -508,14 +529,14 @@ Without `bitLength: 3`, the full 8 bits would be written, corrupting the `y` fie
 - **SEQUENCE** fields (mandatory, optional, default, extension)
 - **CHOICE** alternative values (root and extension)
 - **SEQUENCE OF** array elements
-- **Top-level** `SchemaCodec.encode()`, `SchemaCodec.encodeToHex()`, and `SchemaCodec.encodeToRawBytes()`
+- **Top-level** `codec.raw.encode()`, `codec.raw.encodeToHex()`, and `codec.raw.encodeToRawBytes()`
 
 ## Error Handling
 
 Encoding throws errors when:
 - A value is outside the constrained range (non-extensible INTEGER)
 - An ENUMERATED value is not in the values list
-- A CHOICE object has zero or multiple keys
+- A CHOICE `key` does not name one of the alternatives
 - A required SEQUENCE field is missing
 - A string exceeds the SIZE constraint
 

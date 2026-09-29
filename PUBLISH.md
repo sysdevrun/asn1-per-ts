@@ -45,7 +45,13 @@ On the GitHub side, the workflow already has `id-token: write` permission, which
 
 Publishing is fully automated via GitHub releases. Follow these steps:
 
-### 1. Bump the version
+### 1. Update the changelog
+
+Move the entries under `## [Unreleased]` in `CHANGELOG.md` into a section for the
+version you are about to publish, and commit that. Anything marked **Breaking**
+there decides whether the next step is `major` or `minor`.
+
+### 2. Bump the version
 
 ```bash
 # For a patch release (bug fixes)
@@ -60,18 +66,18 @@ npm version major
 
 This updates `package.json`, creates a git commit, and creates a git tag (e.g., `v1.0.1`).
 
-### 2. Push the commit and tag
+### 3. Push the commit and tag
 
 ```bash
 git push origin main --follow-tags
 ```
 
-### 3. Create a GitHub release
+### 4. Create a GitHub release
 
 1. Go to https://github.com/sysdevrun/asn1-per-ts/releases/new
 2. Select the tag you just pushed (e.g., `v1.0.1`)
 3. Set the release title (e.g., `v1.0.1`)
-4. Add release notes (or click **Generate release notes** for auto-generated notes)
+4. Add release notes — paste the section you just moved in `CHANGELOG.md`, or click **Generate release notes**
 5. Click **Publish release**
 
 The `publish.yml` GitHub Action will automatically:

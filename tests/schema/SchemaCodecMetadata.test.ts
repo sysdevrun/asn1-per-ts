@@ -56,7 +56,7 @@ describe('SchemaCodec.decodeWithMetadata', () => {
       ],
     });
 
-    const original = { id: 42, active: true, status: 'approved' };
+    const original = { id: 42, active: true, status: 'approved' } as const;
     const encoded = codec.encode(original);
 
     const decoded = codec.decode(encoded);
@@ -91,7 +91,7 @@ describe('SchemaCodec.decodeWithMetadata', () => {
       id: 100,
       tags: ['foo', 'bar'],
       type: { key: 'complex', value: 500 },
-    };
+    } as const;
 
     const encoded = codec.encode(original);
     const decoded = codec.decode(encoded);
