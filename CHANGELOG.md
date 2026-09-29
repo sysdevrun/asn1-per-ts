@@ -13,6 +13,10 @@ Releases before this file was added are documented in the
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [2.0.0] - 2026-09-29
+
 Typed encoding and decoding. `decode()` used to return `unknown` and `encode()`
 used to accept `unknown`, so callers wrote their own interfaces and cast. The
 types are now derived from the schema, three ways: from an inline `SchemaNode`
@@ -104,3 +108,6 @@ and the emitted JavaScript is unchanged.
   documented a `{ name: value }` shape the codecs stopped producing, with a hex
   string that threw when decoded. They now show `{ key, value }` with working
   hex.
+
+[Unreleased]: https://github.com/sysdevrun/asn1-per-ts/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/sysdevrun/asn1-per-ts/compare/v1.4.0...v2.0.0
