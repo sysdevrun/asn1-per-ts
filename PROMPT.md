@@ -267,3 +267,7 @@ i want the bin
 ## Audit changelog and README against the typed-API changes
 
 does changelog and readme up to date with the changes?
+
+## Rework schema-parser.md and merge the pull request
+
+yes rework schema-parser.md too. Then merge the PR
